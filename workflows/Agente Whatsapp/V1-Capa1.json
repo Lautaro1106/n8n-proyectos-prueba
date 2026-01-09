@@ -1,0 +1,761 @@
+{
+  "name": "Capa 1 - Recepción y Normalización",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "entrada-agencia",
+        "options": {}
+      },
+      "id": "d8167019-3fca-4ee1-99c7-eaea25d5e62f",
+      "name": "Webhook WA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -32
+      ],
+      "webhookId": "c555664a-2ec1-4d01-857b-52ce715efd2d"
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "ba65c230-2908-458c-9a4b-be4dc7b5eb19",
+      "name": "Buffer Espera (20s)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -48
+      ],
+      "webhookId": "67bde2f8-cec2-4431-9300-41f293a14acc"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtenemos los mensajes\nconst mensajes = $input.all();\n\nif (mensajes.length === 0) return [];\n\n// 2. ORDENAR: Aseguramos que vayan del más viejo al más nuevo por ID\n// (Evita que el bot responda al revés si llegaron desordenados)\nmensajes.sort((a, b) => a.json.id - b.json.id);\n\n// 3. Unir textos con un salto de línea para que la IA entienda mejor\nconst textoUnificado = mensajes.map(m => m.json.mensaje).join(\". \\n\");\n\n// 4. RETORNO: Usamos los nombres EXACTOS que espera la Capa 2\nreturn [{\n  json: {\n    whatsapp_id: mensajes[0].json.whatsapp_id, // Usamos whatsapp_id (no wa_id)\n    mensaje: textoUnificado // Usamos mensaje (no texto_consolidado)\n  }\n}];"
+      },
+      "id": "c5c341f0-e180-4f8a-8db5-047bb85febc2",
+      "name": "Unificar Texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.somoslibresuba.com/webhook-test/procesador-estados",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}"
+            },
+            {
+              "name": "mensaje",
+              "value": "={{ $json.mensaje }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fbf6ba61-91c6-4ef1-8ec2-13ec27e2e2e1",
+      "name": "Enviar a Capa 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2624,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0a031e8-4b9b-465a-99ad-8dbe4dc34440",
+              "leftValue": "={{ $json.body.data.messageType }}",
+              "rightValue": "audioMessage",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -144
+      ],
+      "id": "133050ca-a2aa-42ad-ae0a-8332abe5b8fe",
+      "name": "Se envía como texto"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a8718a43-da7f-4bf9-8876-9447c6ab73bd"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "de9f7833-dbee-4ffe-bdc5-2043a0cbcd0f",
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "audioMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        240,
+        -32
+      ],
+      "id": "b5b09524-e525-46a4-8f8f-0f2d8a15fc80",
+      "name": "Es Texto o Audio?"
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "get-media-base64",
+        "instanceName": "=demo2026",
+        "messageId": "={{ $json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        464,
+        80
+      ],
+      "id": "67b51acf-b1f9-4bb4-8a91-21ab7c43af1a",
+      "name": "Audio en Base 64",
+      "credentials": {
+        "evolutionApi": {
+          "id": "YtJ7BXEc3SHJIAh0",
+          "name": "wpp - demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data.base64",
+        "options": {
+          "fileName": "fe.ogg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        80
+      ],
+      "id": "e325c1e9-8e0d-4d83-aec6-8a7aefe80d8f",
+      "name": "Se convierte en archivo"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        832,
+        80
+      ],
+      "id": "02fa2dae-565d-4038-b8e7-4a3e4d0aea80",
+      "name": "La IA lo transcribe a texto",
+      "credentials": {
+        "openAiApi": {
+          "id": "PYMUXY0gT1VZLiKs",
+          "name": "OpenAi account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "507f5b6c-f399-40d6-9f2a-18691cad03e8",
+              "name": "message.content",
+              "value": "={{ $json.text || $('Webhook WA').item.json.body.data.message.conversation || $('Webhook WA').item.json.body.data.message.extendedTextMessage?.text || \"Sin contenido\" }}",
+              "type": "string"
+            },
+            {
+              "id": "ef3d45b3-482c-4007-85fd-d404ddb3350e",
+              "name": "message.timestamp",
+              "value": "={{\n  $json.body?.data?.messageTimestamp \n    ? new Date(Number($json.body.data.messageTimestamp) * 1000).toISOString()\n    : $('Webhook WA').item.json.body.data.messageTimestamp\n    ? new Date(Number($('Webhook WA').item.json.body.data.messageTimestamp) * 1000).toISOString()\n    : new Date().toISOString()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "d4366476-5855-4865-ba57-067482b32671",
+              "name": "payload",
+              "value": "={{\n  JSON.stringify({\n    userId: $('Webhook WA').item.json.body.data.key.remoteJid,\n    text: $json.text || $('Webhook WA').item.json.body.data.message.conversation || \"\",\n    pushName: $('Webhook WA').item.json.body.data.pushName,\n    messageType: $('Webhook WA').item.json.body.data.messageType,\n    source: $('Webhook WA').item.json.body.data.source,\n    raw: $('Webhook WA').item.json.body.data.message || null\n  })\n}}",
+              "type": "string"
+            },
+            {
+              "id": "f2cd8477-a63c-49d4-9f20-a2b77f0e953d",
+              "name": "message.user_name",
+              "value": "={{ $('Webhook WA').item.json.body.data.pushName }}",
+              "type": "string"
+            },
+            {
+              "id": "816e1285-83ae-4823-8689-b4356830aa8f",
+              "name": "message.content_type",
+              "value": "={{ $('Webhook WA').item.json.body.data.messageType }}",
+              "type": "string"
+            },
+            {
+              "id": "c77dca97-d854-4595-b404-c0f1704051e3",
+              "name": "instance_server_url",
+              "value": "={{ $('Webhook WA').item.json.body.server_url }}",
+              "type": "string"
+            },
+            {
+              "id": "58823986-efea-418f-a865-084dac4bcb6d",
+              "name": "instance.name",
+              "value": "={{ $('Webhook WA').item.json.body.instance }}",
+              "type": "string"
+            },
+            {
+              "id": "d66057d1-8d44-4e56-b64e-0339193cbedf",
+              "name": "instance.apikey",
+              "value": "={{ $('Webhook WA').item.json.body.apikey }}",
+              "type": "string"
+            },
+            {
+              "id": "96a0b43b-c699-4d3c-a9b9-106ebc311aed",
+              "name": "message.message_id",
+              "value": "={{ $('Webhook WA').item.json.body.data.key.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1c3bc493-e974-42f0-bb75-c3d0b15ff71f",
+              "name": "message.chat_id",
+              "value": "={{ $('Webhook WA').item.json.body.data.key.remoteJid }}",
+              "type": "string"
+            },
+            {
+              "id": "a864f23a-d959-4c3f-93b6-bcb7869da55b",
+              "name": "audio_transcription",
+              "value": "={{ $json.text || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1056,
+        -16
+      ],
+      "id": "22a8b51e-7c3d-4919-ad85-f3cc42143d1f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## CAPA 1: RECEPTOR & BUFFER INTELIGENTE \n---\n- Objetivo: Este workflow es para guardar todos los mensajes que se mandan para que la IA procese los mensajes en orden y sin mezclar usuarios",
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -64
+      ],
+      "id": "fabd631e-75bb-4677-b942-2d79e01c8932",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GTco1FWIVxa11eHt",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GTco1FWIVxa11eHt",
+          "cachedResultName": "Capa 2 - Cerebro"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_id": "={{ $json.whatsapp_id }}",
+            "mensaje": "={{ $json.mensaje }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2416,
+        -80
+      ],
+      "id": "f363777a-b08a-4c9c-900c-9e688b3a0872",
+      "name": "Call 'Capa 2 - Cerebro'"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE inbox\nSET procesado = true\nWHERE whatsapp_id = $1\n  AND procesado = false\nRETURNING *;",
+        "options": {
+          "queryReplacement": "=={{ $('Guardar en Inbox').item.json.whatsapp_id }}"
+        }
+      },
+      "id": "bd06a20f-99cf-44f5-a15d-1dd87d596672",
+      "name": "Consume Mensajes (Atomic)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1696,
+        -48
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1234",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1d65f12c-fe05-4998-9dbc-41c964330021",
+      "name": "Hay mensajes nuevos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "inbox",
+          "mode": "list",
+          "cachedResultName": "inbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "procesado": "={{ false }}",
+            "message_id": "={{ $json.message.message_id }}",
+            "whatsapp_id": "={{ $json.message.chat_id }}",
+            "mensaje": "={{ $json.message.content }}"
+          },
+          "matchingColumns": [
+            "message_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "es_audio",
+              "displayName": "es_audio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "procesado",
+              "displayName": "procesado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1280,
+        -48
+      ],
+      "id": "4333e8c2-4f84-4b3e-920c-715996890f1c",
+      "name": "Guardar en Inbox",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8dc6e1b8-8215-48d1-b5dc-03a99930f770",
+              "leftValue": "={{ $json.body.data.key.fromMe }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -16,
+        -48
+      ],
+      "id": "017d7169-fc02-4f35-838d-79842c6cb955",
+      "name": "Soy yo el que escribio?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook WA": {
+      "main": [
+        [
+          {
+            "node": "Soy yo el que escribio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer Espera (20s)": {
+      "main": [
+        [
+          {
+            "node": "Consume Mensajes (Atomic)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar Texto": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 2 - Cerebro'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se envía como texto": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Texto o Audio?": {
+      "main": [
+        [
+          {
+            "node": "Se envía como texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Audio en Base 64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio en Base 64": {
+      "main": [
+        [
+          {
+            "node": "Se convierte en archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se convierte en archivo": {
+      "main": [
+        [
+          {
+            "node": "La IA lo transcribe a texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "La IA lo transcribe a texto": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consume Mensajes (Atomic)": {
+      "main": [
+        [
+          {
+            "node": "Hay mensajes nuevos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay mensajes nuevos?": {
+      "main": [
+        [
+          {
+            "node": "Unificar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Inbox": {
+      "main": [
+        [
+          {
+            "node": "Buffer Espera (20s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Soy yo el que escribio?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Es Texto o Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "5446bb8f-50c4-4299-817f-bdd5669ddcb3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "1OylsTtWgtZ9aeUV",
+  "tags": []
+}

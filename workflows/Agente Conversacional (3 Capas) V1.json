@@ -1,0 +1,2492 @@
+{
+  "name": "Capa 1 - Recepción y Normalización",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "entrada-agencia",
+        "options": {}
+      },
+      "id": "d8167019-3fca-4ee1-99c7-eaea25d5e62f",
+      "name": "Webhook WA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -32
+      ],
+      "webhookId": "c555664a-2ec1-4d01-857b-52ce715efd2d"
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "ba65c230-2908-458c-9a4b-be4dc7b5eb19",
+      "name": "Buffer Espera (20s)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -48
+      ],
+      "webhookId": "67bde2f8-cec2-4431-9300-41f293a14acc"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtenemos los mensajes\nconst mensajes = $input.all();\n\nif (mensajes.length === 0) return [];\n\n// 2. ORDENAR: Aseguramos que vayan del más viejo al más nuevo por ID\n// (Evita que el bot responda al revés si llegaron desordenados)\nmensajes.sort((a, b) => a.json.id - b.json.id);\n\n// 3. Unir textos con un salto de línea para que la IA entienda mejor\nconst textoUnificado = mensajes.map(m => m.json.mensaje).join(\". \\n\");\n\n// 4. RETORNO: Usamos los nombres EXACTOS que espera la Capa 2\nreturn [{\n  json: {\n    whatsapp_id: mensajes[0].json.whatsapp_id, // Usamos whatsapp_id (no wa_id)\n    mensaje: textoUnificado // Usamos mensaje (no texto_consolidado)\n  }\n}];"
+      },
+      "id": "c5c341f0-e180-4f8a-8db5-047bb85febc2",
+      "name": "Unificar Texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.somoslibresuba.com/webhook-test/procesador-estados",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}"
+            },
+            {
+              "name": "mensaje",
+              "value": "={{ $json.mensaje }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fbf6ba61-91c6-4ef1-8ec2-13ec27e2e2e1",
+      "name": "Enviar a Capa 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2624,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0a031e8-4b9b-465a-99ad-8dbe4dc34440",
+              "leftValue": "={{ $json.body.data.messageType }}",
+              "rightValue": "audioMessage",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        -144
+      ],
+      "id": "133050ca-a2aa-42ad-ae0a-8332abe5b8fe",
+      "name": "Se envía como texto"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a8718a43-da7f-4bf9-8876-9447c6ab73bd"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "de9f7833-dbee-4ffe-bdc5-2043a0cbcd0f",
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "audioMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        240,
+        -32
+      ],
+      "id": "b5b09524-e525-46a4-8f8f-0f2d8a15fc80",
+      "name": "Es Texto o Audio?"
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "get-media-base64",
+        "instanceName": "=demo2026",
+        "messageId": "={{ $json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        464,
+        80
+      ],
+      "id": "67b51acf-b1f9-4bb4-8a91-21ab7c43af1a",
+      "name": "Audio en Base 64",
+      "credentials": {
+        "evolutionApi": {
+          "id": "YtJ7BXEc3SHJIAh0",
+          "name": "wpp - demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data.base64",
+        "options": {
+          "fileName": "fe.ogg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        80
+      ],
+      "id": "e325c1e9-8e0d-4d83-aec6-8a7aefe80d8f",
+      "name": "Se convierte en archivo"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        832,
+        80
+      ],
+      "id": "02fa2dae-565d-4038-b8e7-4a3e4d0aea80",
+      "name": "La IA lo transcribe a texto",
+      "credentials": {
+        "openAiApi": {
+          "id": "PYMUXY0gT1VZLiKs",
+          "name": "OpenAi account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "507f5b6c-f399-40d6-9f2a-18691cad03e8",
+              "name": "message.content",
+              "value": "={{ $json.text || $('Webhook WA').item.json.body.data.message.conversation || $('Webhook WA').item.json.body.data.message.extendedTextMessage?.text || \"Sin contenido\" }}",
+              "type": "string"
+            },
+            {
+              "id": "ef3d45b3-482c-4007-85fd-d404ddb3350e",
+              "name": "message.timestamp",
+              "value": "={{\n  $json.body?.data?.messageTimestamp \n    ? new Date(Number($json.body.data.messageTimestamp) * 1000).toISOString()\n    : $('Webhook WA').item.json.body.data.messageTimestamp\n    ? new Date(Number($('Webhook WA').item.json.body.data.messageTimestamp) * 1000).toISOString()\n    : new Date().toISOString()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "d4366476-5855-4865-ba57-067482b32671",
+              "name": "payload",
+              "value": "={{\n  JSON.stringify({\n    userId: $('Webhook WA').item.json.body.data.key.remoteJid,\n    text: $json.text || $('Webhook WA').item.json.body.data.message.conversation || \"\",\n    pushName: $('Webhook WA').item.json.body.data.pushName,\n    messageType: $('Webhook WA').item.json.body.data.messageType,\n    source: $('Webhook WA').item.json.body.data.source,\n    raw: $('Webhook WA').item.json.body.data.message || null\n  })\n}}",
+              "type": "string"
+            },
+            {
+              "id": "f2cd8477-a63c-49d4-9f20-a2b77f0e953d",
+              "name": "message.user_name",
+              "value": "={{ $('Webhook WA').item.json.body.data.pushName }}",
+              "type": "string"
+            },
+            {
+              "id": "816e1285-83ae-4823-8689-b4356830aa8f",
+              "name": "message.content_type",
+              "value": "={{ $('Webhook WA').item.json.body.data.messageType }}",
+              "type": "string"
+            },
+            {
+              "id": "c77dca97-d854-4595-b404-c0f1704051e3",
+              "name": "instance_server_url",
+              "value": "={{ $('Webhook WA').item.json.body.server_url }}",
+              "type": "string"
+            },
+            {
+              "id": "58823986-efea-418f-a865-084dac4bcb6d",
+              "name": "instance.name",
+              "value": "={{ $('Webhook WA').item.json.body.instance }}",
+              "type": "string"
+            },
+            {
+              "id": "d66057d1-8d44-4e56-b64e-0339193cbedf",
+              "name": "instance.apikey",
+              "value": "={{ $('Webhook WA').item.json.body.apikey }}",
+              "type": "string"
+            },
+            {
+              "id": "96a0b43b-c699-4d3c-a9b9-106ebc311aed",
+              "name": "message.message_id",
+              "value": "={{ $('Webhook WA').item.json.body.data.key.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1c3bc493-e974-42f0-bb75-c3d0b15ff71f",
+              "name": "message.chat_id",
+              "value": "={{ $('Webhook WA').item.json.body.data.key.remoteJid }}",
+              "type": "string"
+            },
+            {
+              "id": "a864f23a-d959-4c3f-93b6-bcb7869da55b",
+              "name": "audio_transcription",
+              "value": "={{ $json.text || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1056,
+        -16
+      ],
+      "id": "22a8b51e-7c3d-4919-ad85-f3cc42143d1f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## CAPA 1: RECEPTOR & BUFFER INTELIGENTE \n---\n- Objetivo: Este workflow es para guardar todos los mensajes que se mandan para que la IA procese los mensajes en orden y sin mezclar usuarios",
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -64
+      ],
+      "id": "fabd631e-75bb-4677-b942-2d79e01c8932",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GTco1FWIVxa11eHt",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GTco1FWIVxa11eHt",
+          "cachedResultName": "Capa 2 - Cerebro"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_id": "={{ $json.whatsapp_id }}",
+            "mensaje": "={{ $json.mensaje }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        2416,
+        -80
+      ],
+      "id": "f363777a-b08a-4c9c-900c-9e688b3a0872",
+      "name": "Call 'Capa 2 - Cerebro'"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE inbox\nSET procesado = true\nWHERE whatsapp_id = $1\n  AND procesado = false\nRETURNING *;",
+        "options": {
+          "queryReplacement": "=={{ $('Guardar en Inbox').item.json.whatsapp_id }}"
+        }
+      },
+      "id": "bd06a20f-99cf-44f5-a15d-1dd87d596672",
+      "name": "Consume Mensajes (Atomic)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1696,
+        -48
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1234",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1d65f12c-fe05-4998-9dbc-41c964330021",
+      "name": "Hay mensajes nuevos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "inbox",
+          "mode": "list",
+          "cachedResultName": "inbox"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "procesado": "={{ false }}",
+            "message_id": "={{ $json.message.message_id }}",
+            "whatsapp_id": "={{ $json.message.chat_id }}",
+            "mensaje": "={{ $json.message.content }}"
+          },
+          "matchingColumns": [
+            "message_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "es_audio",
+              "displayName": "es_audio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "procesado",
+              "displayName": "procesado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1280,
+        -48
+      ],
+      "id": "4333e8c2-4f84-4b3e-920c-715996890f1c",
+      "name": "Guardar en Inbox",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8dc6e1b8-8215-48d1-b5dc-03a99930f770",
+              "leftValue": "={{ $json.body.data.key.fromMe }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -16,
+        -48
+      ],
+      "id": "017d7169-fc02-4f35-838d-79842c6cb955",
+      "name": "Soy yo el que escribio?"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook WA": {
+      "main": [
+        [
+          {
+            "node": "Soy yo el que escribio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer Espera (20s)": {
+      "main": [
+        [
+          {
+            "node": "Consume Mensajes (Atomic)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar Texto": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 2 - Cerebro'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se envía como texto": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es Texto o Audio?": {
+      "main": [
+        [
+          {
+            "node": "Se envía como texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Audio en Base 64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audio en Base 64": {
+      "main": [
+        [
+          {
+            "node": "Se convierte en archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se convierte en archivo": {
+      "main": [
+        [
+          {
+            "node": "La IA lo transcribe a texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "La IA lo transcribe a texto": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consume Mensajes (Atomic)": {
+      "main": [
+        [
+          {
+            "node": "Hay mensajes nuevos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay mensajes nuevos?": {
+      "main": [
+        [
+          {
+            "node": "Unificar Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en Inbox": {
+      "main": [
+        [
+          {
+            "node": "Buffer Espera (20s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Soy yo el que escribio?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Es Texto o Audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "5446bb8f-50c4-4299-817f-bdd5669ddcb3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "1OylsTtWgtZ9aeUV",
+  "tags": []
+}
+
+
+{
+  "name": "Capa 2 - Cerebro",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bbb441d6-0f44-4394-a1d7-c02d0bf9ade0",
+      "name": "Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1376,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "5e1b446e-2d1f-4a0a-b5f0-7e1cd1cb1ab5",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "2915075d-5f48-4f9d-a076-f7e49596cabf",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "57be0673-ac55-4fd5-9372-52cd44cec5a7",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4d97a6b9-abc3-450c-9bd3-47d52e68c8dc",
+      "name": "Switch Paso Actual",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1072,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88d5b8b5-67d3-4500-b815-02c446d49b4a",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: El usuario es nuevo. Estamos en la Fase 0: Bienvenida. INSTRUCCIÓN: Saluda amablemente, preséntate y rompe el hielo. NO hagas preguntas de ventas todavía. Tu objetivo es solo conectar.",
+              "type": "string"
+            },
+            {
+              "id": "2b72bfca-679c-4738-9611-078dc345c7f8",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "23e15014-1421-415c-9922-28a747fa89dd",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "d015621e-0db7-4311-a788-2545c8b7cc65",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "918656ee-b671-4ad4-9d27-e4c42dcd5746",
+      "name": "Set Prompt Bienvenida",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -784,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "610b886d-ac52-45e8-a504-5402246c3056",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: Conversación avanzada. Estamos en la Fase 2: Solución/Cierre. INSTRUCCIÓN: Si ya tienes toda la información necesaria (BANT), puedes proceder a explicar cómo ayudas o dar rangos de precios según tu Prompt Maestro. Si no, sigue investigando.",
+              "type": "string"
+            },
+            {
+              "id": "7e7f5d0c-9e73-412b-97ba-679e5a63d268",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "14e290ad-97e2-46c0-92c1-85967a0c58b0",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "033cd34f-017a-4302-a2ff-a5afcb17e2f6",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "23b2939a-3b1c-41e3-9b8a-6c94b15e28ae",
+      "name": "Set Prompt Presupuesto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -784,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e728f3a-6ddb-47ce-8914-ca4a719edeb3",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: El usuario ya inició la conversación. Estamos en la Fase 1: Discovery. INSTRUCCIÓN: Aplica estrictamente tu Prompt Maestro. Haz preguntas de diagnóstico para entender su negocio. NO des precios ni presupuestos todavía hasta entender sus dolores.",
+              "type": "string"
+            },
+            {
+              "id": "17599e84-8fac-4492-bf8d-851f0441213a",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ef52030f-a7c5-4895-a76e-ca3dc013410c",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "c7cc58d1-cad0-4764-8880-0d239dc903c2",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6680dcda-7557-4434-936f-ae404c81afaa",
+      "name": "Set Prompt Nicho",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -784,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.somoslibresuba.com/webhook-test/agente-respuesta",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "whatsapp_id",
+              "value": "={{ $('Webhook Interno').item.json.body.whatsapp_id }}"
+            },
+            {
+              "name": "mensaje_usuario",
+              "value": "={{ $node[\"Webhook Interno\"].json.body.mensaje }}"
+            },
+            {
+              "name": "instruccion_sistema",
+              "value": "={{ $json.prompt_instruccion }}"
+            },
+            {
+              "name": "nombre_guardado",
+              "value": "={{ $json.nombre_guardado }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a38c15cb-8cf6-4201-b9f7-c0db96cae2c1",
+      "name": "Enviar a Capa 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -128,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "whatsapp_id"
+            },
+            {
+              "name": "mensaje"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1952,
+        128
+      ],
+      "id": "b06488d1-e4f2-46a1-9a78-14e895fef6b8",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "3gR60YDbhVJ3Ynrp",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/3gR60YDbhVJ3Ynrp",
+          "cachedResultName": "Capa 3 - Cerebro IA (Loop Dinámico)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "prompt_instruccion": "={{ $json.prompt_instruccion }}",
+            "nombre_guardado": "={{ $json.nombre_guardado }}",
+            "whatsapp_id": "={{ $json.whatsapp_id }}",
+            "mensaje": "={{ $json.mensaje }}",
+            "estado": "={{ $json.estado }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "prompt_instruccion",
+              "displayName": "prompt_instruccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nombre_guardado",
+              "displayName": "nombre_guardado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        96
+      ],
+      "id": "ce56f01e-d7e2-42f4-8950-f8a119ac90a1",
+      "name": "Call 'Capa 3 - Agente IA y Respuesta'"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1632,
+        128
+      ],
+      "id": "2135c7df-69bc-4384-9b79-2030a561aa38",
+      "name": "Consultar Lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paso_actual": 0,
+            "estado": "nuevo",
+            "whatsapp_id": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}",
+            "creado_en": "={{ $now.format('dd-MM-yyyy') }}",
+            "actualizado_en": "={{ $now.format('dd-MM-yyyy') }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "respuestas",
+              "displayName": "respuestas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "creado_en",
+              "displayName": "creado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "actualizado_en",
+              "displayName": "actualizado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "replaceEmptyStrings": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1120,
+        352
+      ],
+      "id": "07cc590e-8a1a-419e-92ef-97d23b3d2965",
+      "name": "Crear nuevo lead",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "whatsapp_id": "5491135981204@s.whatsapp.net",
+          "mensaje": "Podes ayudarme?"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Existe?": {
+      "main": [
+        [
+          {
+            "node": "Switch Paso Actual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crear nuevo lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Paso Actual": {
+      "main": [
+        [
+          {
+            "node": "Set Prompt Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Prompt Nicho",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Prompt Presupuesto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Bienvenida": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Presupuesto": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Nicho": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Consultar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Lead": {
+      "main": [
+        [
+          {
+            "node": "Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear nuevo lead": {
+      "main": [
+        [
+          {
+            "node": "Set Prompt Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL"
+  },
+  "versionId": "9d3ab84a-0968-42f9-8bcb-316cce423a8f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "GTco1FWIVxa11eHt",
+  "tags": []
+}
+
+{
+  "name": "Capa 3 - Cerebro IA (Loop Dinámico)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -2336,
+        352
+      ],
+      "id": "995ebf9f-d441-4bf4-9103-b3ec5997841b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "PYMUXY0gT1VZLiKs",
+          "name": "OpenAi account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "prompt_instruccion"
+            },
+            {
+              "name": "nombre_guardado"
+            },
+            {
+              "name": "whatsapp_id"
+            },
+            {
+              "name": "mensaje"
+            },
+            {
+              "name": "estado"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2464,
+        -352
+      ],
+      "id": "a9cab920-215f-477b-b28f-2d6251bbfe7b",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "preserve-data",
+              "name": "whatsapp_id",
+              "value": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "preserve-fase",
+              "name": "fase_sugerida",
+              "value": "={{ $json.output.fase_sugerida }}",
+              "type": "number"
+            },
+            {
+              "id": "preserve-nombre",
+              "name": "nombre_detectado",
+              "value": "={{ $json.output.nombre_detectado }}",
+              "type": "string"
+            },
+            {
+              "id": "preserve-nombre-guardado",
+              "name": "nombre_guardado",
+              "value": "={{ $('When Executed by Another Workflow').item.json.nombre_guardado }}",
+              "type": "string"
+            },
+            {
+              "id": "d39a41fb-70b7-4bb0-809b-ef0f892afef9",
+              "name": "analisis_lead",
+              "value": "={{ $json.output.analisis_lead }}",
+              "type": "object"
+            },
+            {
+              "id": "77ebddef-0d6f-478a-a50b-d564a8f4c857",
+              "name": "telefono_limpio",
+              "value": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id.split('@')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "8411c42d-8b8f-4cf0-85db-7317ba1e4992",
+              "name": "estado",
+              "value": "={{ $('Leer estado del lead').item.json.estado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1424,
+        -352
+      ],
+      "id": "26600c77-f340-404c-8983-c0a8c08ca5b0",
+      "name": "Preserve Context"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        -80
+      ],
+      "id": "d257c721-2789-462d-9c1f-abfdf760c7a8",
+      "name": "Split Messages"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mensaje-actual",
+              "name": "mensaje_actual",
+              "value": "={{ $json['output.messages'] }}",
+              "type": "string"
+            },
+            {
+              "id": "tiempo-espera",
+              "name": "tiempo_espera",
+              "value": "={{ Math.max(2, Math.ceil(($json['output.messages'].length / 20))) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        -80
+      ],
+      "id": "fe73c7ba-ca88-4b32-8d85-d3d72f92519c",
+      "name": "Calculate Wait Time"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.tiempo_espera }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        -80
+      ],
+      "id": "b09e7f7e-739d-4bfb-b0d7-5be7e481282e",
+      "name": "Wait Dinámico",
+      "webhookId": "wait-dynamic-typing"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "demo2026",
+        "remoteJid": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}",
+        "messageText": "={{ $json.mensaje_actual }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -80
+      ],
+      "id": "fad8a2af-af4a-436d-95bf-66fae30e6d19",
+      "name": "Enviar Mensaje",
+      "credentials": {
+        "evolutionApi": {
+          "id": "YtJ7BXEc3SHJIAh0",
+          "name": "wpp - demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "messages_sent",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -80
+      ],
+      "id": "82c2b075-27e2-41d8-890a-f083bc673f66",
+      "name": "Aggregate Sent Messages"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=NOMBRE_GUARDADO: \"={{ $('When Executed by Another Workflow').item.json.nombre_guardado }}\"\n\nINPUT DEL USUARIO:\n{{ $('When Executed by Another Workflow').item.json.mensaje }}\n\nCONTEXTO/INSTRUCCIÓN DE FASE:\n{{ $('When Executed by Another Workflow').item.json.prompt_instruccion }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Eres un agente de IA conversacional que sirve como **demo interactiva** de soluciones de automatización con inteligencia artificial. Tu misión es doble: demostrar el valor de la IA mientras calificas y captas información de prospectos interesados.\n\nPuedes interpretar audios sin problema.\n\n---\n\n## ⚠️ FORMATO DE RESPUESTA OBLIGATORIO - STRUCTURED OUTPUT\n\n**CRÍTICO**: Tu respuesta SIEMPRE debe ser un JSON válido con esta estructura exacta:\n\n```json\n{\n  \"messages\": [\"tu respuesta aquí\"],\n  \"fase_sugerida\": 0,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT/WARM/COLD\",\n    \"razon_corta\": \"Resumen de 1 linea para la base de datos\",\n    \"tipo_negocio\": \"Rubro del cliente o 'No mencionado'\",\n    \"tamano_equipo\": \"Cantidad de personas o 'No mencionado'\",\n    \"problema_principal\": \"El dolor principal o 'No mencionado'\",\n    \"urgencia\": \"Alta/Media/Baja\",\n    \"presupuesto\": \"Si/No/No sabe\"\n  }\n}\n```\n\n### 🔴 REGLAS CRÍTICAS DEL JSON (NUNCA VIOLAR):\n\n1. **El objeto `analisis_lead` es OBLIGATORIO en cada respuesta**\n   - NUNCA omitas este objeto\n   - NUNCA dejes campos vacíos dentro de él\n\n2. **Todos los campos internos de `analisis_lead` son OBLIGATORIOS**\n   - `clasificacion`: SIEMPRE debe ser \"HOT\", \"WARM\" o \"COLD\"\n   - `razon_corta`: Máximo 10 palabras explicando por qué clasificaste así\n   - `tipo_negocio`: Rubro/industria del cliente\n   - `tamano_equipo`: Cantidad de personas en el equipo\n   - `problema_principal`: El dolor o necesidad principal\n   - `urgencia`: \"Alta\", \"Media\" o \"Baja\"\n   - `presupuesto`: \"Si\", \"No\" o \"No sabe\"\n\n3. **Manejo de datos no mencionados**\n   - Si el usuario NO ha mencionado un dato, escribe exactamente: **\"No mencionado\"**\n   - NUNCA dejes un campo vacío (\"\")\n   - NUNCA omitas una clave del JSON\n   - Ejemplo: Si no conoces el tamaño de equipo → `\"tamano_equipo\": \"No mencionado\"`\n\n4. **Validación antes de enviar**\n   - Verifica que todos los 7 campos de `analisis_lead` estén presentes\n   - Verifica que ningún campo esté vacío\n   - Verifica que `messages` sea un array con al menos 1 elemento\n   - Verifica que `fase_sugerida` sea un número entre 0-3\n\n---\n\n## 📊 Sobre el campo \"messages\":\n- Es un ARRAY que puede tener 1, 2 o 3 elementos según tu análisis\n- Aplica la Ley del Espejo: si el usuario escribe poco, envía 1 mensaje\n- Si necesitas explicar + preguntar, usa 2 mensajes\n- Solo usa 3 si es absolutamente necesario (explicación compleja)\n\n---\n\n## 💡 Sobre \"nombre_detectado\":\n- Si detectas un nombre en la conversación, ponlo aquí\n- Si no hay nombre claro, deja el string vacío: \"\"\n- Ejemplos: \"Juan\", \"María Pérez\", \"\"\n\n---\n\n## 🎯 Sobre \"fase_sugerida\":\n- Es un número que representa en qué etapa está el lead\n- **0** = Primera interacción / Exploración\n- **1** = Discovery / Conociendo el negocio\n- **2** = Calificación / Hablando de precios\n- **3** = Cierre / Listo para agendar\n\n---\n\n## 📈 Sobre \"analisis_lead.clasificacion\":\n\n**HOT (Caliente)** - Cumple 3+ de estos criterios:\n- Quiere comprar YA, tiene urgencia\n- Pregunta precios o solicita reunión\n- Es dueño/decisor con presupuesto\n- Menciona problemas específicos que resuelves\n- Timeline inmediato (días/semanas)\n\n**WARM (Tibio)** - Cumple 2 de estos criterios:\n- Pregunta detalles específicos del servicio\n- Tiene interés pero está comparando opciones\n- Menciona su negocio y problemas\n- No tiene urgencia inmediata pero sí interés genuino\n\n**COLD (Frío)** - Cumple 1 o ninguno:\n- Solo saluda o hace preguntas muy generales\n- Respuestas cortantes o desinterés evidente\n- Dice explícitamente que no le interesa\n- Solo curiosidad sin contexto de negocio\n\n---\n\n## ❌ Lo que NO debes hacer:\n- Agregar campos adicionales al JSON\n- Dejar \"messages\" vacío []\n- Usar comillas simples en lugar de dobles\n- Agregar texto fuera del JSON\n- **Omitir el objeto `analisis_lead`**\n- **Dejar campos vacíos en `analisis_lead`**\n- **Inventar datos que el usuario no mencionó (usa \"No mencionado\")**\n\n---\n\n## ✅ Ejemplos correctos de respuesta:\n\n### Ejemplo 1 (Usuario breve, primera interacción):\n**Usuario**: \"Hola\"\n\n```json\n{\n  \"messages\": [\"Hola! ¿Qué tipo de negocio tienes?\"],\n  \"fase_sugerida\": 0,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Primer contacto sin contexto\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n### Ejemplo 2 (Usuario detallado con interés):\n**Usuario**: \"Hola, soy Juan. Tengo un restaurante y necesito automatizar reservas\"\n\n```json\n{\n  \"messages\": [\n    \"Perfecto Juan! Para restaurantes, un bot puede manejar reservas 24/7, responder dudas de menú y confirmar asistencia\",\n    \"¿Cuántas reservas recibes aproximadamente por semana?\"\n  ],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"Juan\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"WARM\",\n    \"razon_corta\": \"Necesidad clara, problema especifico\",\n    \"tipo_negocio\": \"Restaurante\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"Automatizar sistema de reservas\",\n    \"urgencia\": \"Media\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n### Ejemplo 3 (Lead caliente listo para cotizar):\n**Usuario**: \"Tengo una agencia digital con 5 personas. Perdemos 30 leads por semana por no poder atenderlos. ¿Cuánto cuesta implementar un bot?\"\n\n```json\n{\n  \"messages\": [\n    \"Esa pérdida de 30 leads semanales es un problema serio de revenue. Un agente IA puede recuperar ese tráfico mientras tu equipo se enfoca en cerrar ventas\",\n    \"La inversión va desde $400 hasta $3,500 según complejidad. Para tu caso, probablemente estaríamos en el rango medio. Tengo 50% OFF para primeros 5 clientes\",\n    \"¿Te parece si agendamos 20 min para mapear tu caso específico y darte un presupuesto exacto?\"\n  ],\n  \"fase_sugerida\": 3,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT\",\n    \"razon_corta\": \"Problema urgente, pregunto precio, tiene equipo\",\n    \"tipo_negocio\": \"Agencia digital\",\n    \"tamano_equipo\": \"5 personas\",\n    \"problema_principal\": \"Pierden 30 leads semanales por capacidad\",\n    \"urgencia\": \"Alta\",\n    \"presupuesto\": \"Si\"\n  }\n}\n```\n\n---\n\n## 🎯 MISIÓN PRINCIPAL\n\n### REGLA DE ORO: **Entender PRIMERO, cotizar DESPUÉS**\n\n1. **Escuchar y comprender**: Cada negocio es único, necesitas entender su operación real\n2. **Hacer preguntas inteligentes**: Descubre problemas que ni ellos sabían que tenían\n3. **Demostrar capacidades**: Cada interacción debe mostrar lo que la IA puede hacer\n4. **Construir confianza**: Especialmente con negocios pequeños - son tus primeros 5 clientes y los vas a cuidar como oro\n5. **Calificar sin presionar**: Identifica si hay fit real, no fuerces ventas\n6. **NO dar presupuestos prematuros**: Sin entender bien, cualquier número está mal\n\n### Contexto Importante:\n- **Primeros 5 clientes = Fundadores**: Oferta especial 50% OFF en implementación\n- **Mentalidad**: No estás vendiendo, estás consultando\n- **Objetivo**: Relaciones a largo plazo, no transacciones rápidas\n- **No discriminar por tamaño**: Un negocio chico comprometido vale más que uno grande indeciso\n\n---\n\n## 🪞 LEY DEL ESPEJO - Sistema de Respuesta Adaptativa\n\n### Análisis del Input del Usuario\nAntes de responder, SIEMPRE analiza:\n1. **Longitud del mensaje del usuario** (cuenta de palabras)\n2. **Estilo de escritura** (formal/informal, emojis, puntuación)\n3. **Estructura** (párrafos largos, frases cortas, bullet points)\n4. **Intención** (consulta, objeción, interés genuino, curiosidad)\n\n### Regla de Espejo\n**Tu respuesta DEBE reflejar el estilo del usuario:**\n- Usuario escribe 10 palabras → Tú respondes con ~10-15 palabras\n- Usuario escribe 50 palabras → Tú respondes con ~40-60 palabras\n- Usuario escribe 100+ palabras → Tú respondes con ~80-120 palabras\n- Usuario usa emojis → Tú usas emojis similares (con moderación profesional)\n- Usuario es formal → Tú eres formal y profesional\n- Usuario es casual → Tú eres cercano pero profesional\n\n---\n\n## 📊 Sistema de Mensajes Múltiples - REGLAS ESTRICTAS\n\n### ⚠️ REGLA DE ORO: Menos es más. Si puedes decirlo en 1 mensaje, NO uses 2.\n\n### Definición ESTRICTA por Palabras:\n\n**UN MENSAJE (1 respuesta):**\n- **Rango**: 1-30 palabras totales\n- **Cuándo usar**: \n  - Usuario escribió menos de 20 palabras\n  - Respuestas directas y simples\n  - Confirmaciones\n  - Preguntas cortas de calificación\n- **Ejemplo**: \"¿Qué haces?\" → \"Creo bots de IA para negocios. ¿Qué tipo de negocio tienes?\"\n\n**DOS MENSAJES (2 respuestas separadas):**\n- **Rango**: 31-60 palabras totales\n- **Cuándo usar**:\n  - Usuario escribió entre 20-50 palabras\n  - Necesitas explicar + preguntar\n  - Respuesta con contexto breve\n- **División**: Mensaje 1 (15-30 palabras) + Mensaje 2 (15-30 palabras)\n\n**TRES MENSAJES (3 respuestas separadas):**\n- **Rango**: 61+ palabras totales\n- **Cuándo usar**: \n  - Usuario escribió 50+ palabras\n  - Explicaciones complejas absolutamente necesarias\n  - Propuestas detalladas con contexto\n- **División**: Máximo 25 palabras por mensaje\n\n### 🎯 Tabla de Decisión Rápida:\n\n| Usuario escribe | Tú respondes | Mensajes | Palabras totales |\n|----------------|--------------|----------|------------------|\n| 1-10 palabras  | 1 mensaje    | 1        | 8-15 palabras    |\n| 11-20 palabras | 1 mensaje    | 1        | 15-25 palabras   |\n| 21-40 palabras | 1-2 mensajes | 1 o 2    | 20-40 palabras   |\n| 41-60 palabras | 2 mensajes   | 2        | 35-55 palabras   |\n| 61+ palabras   | 2-3 mensajes | 2 o 3    | 50-80 palabras   |\n\n### Fórmula Simplificada:\n```\nPalabras del usuario × 0.9 = Tus palabras aproximadas\n\nSi tus palabras ≤ 30 → 1 mensaje\nSi tus palabras 31-60 → 2 mensajes  \nSi tus palabras 61+ → 3 mensajes (SOLO si es absolutamente necesario)\n```\n\n### ⛔ PROHIBIDO:\n- Responder con 3 mensajes a usuarios que escribieron menos de 30 palabras\n- Usar 2 mensajes cuando 1 es suficiente\n- Agregar mensajes \"de relleno\" solo para llegar a 2 o 3\n- Exceder las 80 palabras totales bajo cualquier circunstancia\n\n---\n\n## 💬 Estilo de Comunicación\n\n- **PRIORIDAD #1**: Aplicar la Ley del Espejo en TODAS las interacciones\n- **Tono**: Profesional pero accesible, consultivo, nunca vendedor\n- **Longitud**: Proporcional al input del usuario\n- **Formato**: Mensajes naturales, conversacionales\n- **Enlaces**: Siempre en línea propia, formato limpio\n- **Emojis**: Uso moderado y profesional (solo si el usuario los usa primero)\n- **Demostración**: Cada respuesta debe mostrar capacidad de IA (comprensión, análisis, personalización)\n\n---\n\n## 🔍 Sistema de Descubrimiento (Discovery) - PRIORIDAD MÁXIMA\n\n### Filosofía: \"Prescribir sin diagnosticar es mala praxis\"\n\nAntes de mencionar CUALQUIER precio, debes entender:\n\n### 1️⃣ **Su Negocio** (Contexto)\n- ¿Qué hace? ¿A quién sirve?\n- ¿Cuánto tiempo lleva operando?\n- ¿Trabaja solo o tiene equipo?\n- ¿Cuál es su modelo de negocio?\n\n### 2️⃣ **Sus Problemas** (Pain Points)\n- ¿Qué consume más tiempo en su día?\n- ¿Qué procesos son repetitivos?\n- ¿Qué oportunidades está perdiendo?\n- ¿Dónde siente que se \"traba\" su operación?\n\n### 3️⃣ **Su Operación Actual** (Status Quo)\n- ¿Cómo maneja consultas de clientes ahora?\n- ¿Qué herramientas/sistemas usa?\n- ¿Qué volumen maneja? (clientes, consultas, ventas)\n- ¿Qué ya intentó automatizar antes?\n\n### 4️⃣ **Su Visión** (Expectativas)\n- ¿Qué cambiaría si pudiera automatizar lo que quiere?\n- ¿Qué resultado concreto busca?\n- ¿En qué timeline piensa implementar?\n- ¿Qué significa \"éxito\" para él?\n\n### 5️⃣ **Su Presupuesto/Mentalidad** (Fit)\n- ¿Ve esto como inversión o gasto?\n- ¿Tiene presupuesto asignado para automatización?\n- ¿Está comprando o investigando?\n- ¿Qué le preocupa más: precio o resultado?\n\n---\n\n## 🎯 Secuencia Ideal de Conversación\n\n### Fase 0: CONEXIÓN (Mensajes 1-3)\n**Objetivo**: Romper el hielo, mostrar que eres diferente\n\n```json\n{\n  \"messages\": [\"¡Hola! Soy un agente de IA 🤖 Esta conversación es una demo de lo que puedo hacer para negocios\"],\n  \"fase_sugerida\": 0,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Primer contacto\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n**NO preguntar todavía por su negocio**. Deja que fluya natural.\n\n---\n\n### Fase 1: DESCUBRIMIENTO (Mensajes 4-10)\n**Objetivo**: Entender profundamente su situación\n\n**Primera pregunta** (si no lo mencionó):\n```json\n{\n  \"messages\": [\"Cuéntame, ¿a qué te dedicas? ¿Qué tipo de negocio tienes?\"],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Iniciando discovery\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n**Preguntas estratégicas progresivas:**\n1. ¿Cuál es el mayor cuello de botella que enfrentas en el día a día?\n2. ¿Cómo manejas actualmente [el problema que mencionó]?\n3. ¿Cuántos [clientes/consultas/ventas] manejas aproximadamente al mes?\n4. Si pudieras automatizar [X], ¿qué harías con ese tiempo/recursos liberados?\n\n---\n\n### Fase 2: CALIFICACIÓN (Mensajes 11-15)\n**Objetivo**: Validar fit sin presionar\n\n```json\n{\n  \"messages\": [\"¿Esto es algo que te interesa implementar pronto o estás explorando para más adelante?\"],\n  \"fase_sugerida\": 2,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"WARM\",\n    \"razon_corta\": \"Calificando timeline\",\n    \"tipo_negocio\": \"[LO QUE MENCIONÓ]\",\n    \"tamano_equipo\": \"[LO QUE MENCIONÓ O 'No mencionado']\",\n    \"problema_principal\": \"[LO QUE MENCIONÓ]\",\n    \"urgencia\": \"Media\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n### Fase 3: PRESUPUESTO (SOLO después de entender bien)\n**Objetivo**: Dar rango contextualizado, NO número exacto\n\n```json\n{\n  \"messages\": [\n    \"Basado en lo que me contaste, estaríamos hablando de un rango medio. Para darte número exacto necesito mapear bien todo\",\n    \"Tengo oferta especial: 50% OFF en implementación para mis primeros 5 clientes de 2026. ¿Te parece si agendamos 20-30min para revisar tu caso en detalle?\"\n  ],\n  \"fase_sugerida\": 3,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT\",\n    \"razon_corta\": \"Listo para agendar reunion\",\n    \"tipo_negocio\": \"[LO QUE MENCIONÓ]\",\n    \"tamano_equipo\": \"[LO QUE MENCIONÓ]\",\n    \"problema_principal\": \"[LO QUE MENCIONÓ]\",\n    \"urgencia\": \"Alta\",\n    \"presupuesto\": \"Si\"\n  }\n}\n```\n\n---\n\n## 💰 Estructura de Precios (RANGOS DE REFERENCIA)\n\n### Implementación Inicial:\n- **Básica**: $400-700 USD (Descuento fundador: $200-350)\n- **Estándar**: $800-1,500 USD (Descuento fundador: $400-750)\n- **Avanzada**: $1,800-3,500 USD (Descuento fundador: $900-1,750)\n- **Enterprise**: $4,000+ USD (Cotización personalizada)\n\n### Mensualidad Recurrente:\n- **Mínimo**: $75 USD/mes\n- **Escalas**: $75-600/mes según complejidad y volumen\n\n---\n\n## 💬 Manejo de \"¿Cuánto cuesta?\" TEMPRANO\n\n```json\n{\n  \"messages\": [\n    \"Depende totalmente de lo que necesites automatizar. Primero cuéntame: ¿qué tipo de negocio tienes? ¿Qué quieres automatizar?\"\n  ],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Pregunta precio sin contexto\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n## 🚫 Restricciones CRÍTICAS\n\n### NUNCA:\n1. Omitir el objeto `analisis_lead` del JSON\n2. Dejar campos vacíos en `analisis_lead` (usa \"No mencionado\")\n3. Inventar datos que el usuario no mencionó\n4. Dar presupuestos exactos sin entender el caso\n5. Ignorar la Ley del Espejo\n6. Enviar 3 mensajes cuando 1 o 2 son suficientes\n7. Exceder 80 palabras totales\n8. Ser vendedor agresivo o insistente\n\n### SIEMPRE:\n1. Incluir todos los campos de `analisis_lead` en cada respuesta\n2. Usar \"No mencionado\" cuando no sepas un dato\n3. Clasificar correctamente: HOT/WARM/COLD según criterios\n4. Aplicar la Ley del Espejo\n5. Entender ANTES de cotizar (mínimo 5-7 preguntas)\n6. Mantener tono consultivo y profesional\n7. Validar que el JSON sea válido antes de enviar\n\n---\n\n## 📈 Recordatorio Final\n\n**La conversación ES la demo**: Cada mensaje debe demostrar inteligencia, comprensión contextual, personalización y análisis. El JSON estructurado permite capturar esta información de manera sistemática mientras mantienes una conversación natural y consultiva.\n\n**Valida siempre tu respuesta antes de enviar:**\n- ✅ ¿Está el objeto `analisis_lead` completo?\n- ✅ ¿Todos los campos tienen valores (sin vacíos)?\n- ✅ ¿Usé \"No mencionado\" donde corresponde?\n- ✅ ¿El JSON es válido?\n- ✅ ¿Apliqué la Ley del Espejo?\n- ✅ ¿La clasificación HOT/WARM/COLD es correcta?\n\n---\n\n*Este agente es la prueba viva de que la IA conversacional puede ser natural, inteligente, efectiva Y estructurada. Cada interacción demuestra valor mientras captura datos de calidad.*"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -1872,
+        -352
+      ],
+      "id": "c5b7b7d1-f300-4fbe-b05d-5c5a80c7a875",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "Claude Haiku 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -2000,
+        -32
+      ],
+      "id": "abe71347-e0ea-441c-995d-40a7c7dbc266",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "cngXenmvU6Z9N0HB",
+          "name": "Anthropic - Propio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id || 'session_sin_id' }}",
+        "tableName": "chat_history",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1792,
+        -32
+      ],
+      "id": "1a88054a-f61d-425f-93b1-4bf8f741d98d",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"messages\": [\n    \"respuesta del bot\"\n  ],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"Nombre o ''\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT\",\n    \"razon_corta\": \"Resumen corto para la Base de Datos (ej: Tiene urgencia y presupuesto)\",\n    \"tipo_negocio\": \"Ej: Inmobiliaria\",\n    \"tamano_equipo\": \"Ej: 5 personas\",\n    \"problema_principal\": \"Ej: Pierde muchas llamadas\",\n    \"urgencia\": \"Alta/Media/Baja\",\n    \"presupuesto\": \"Si/No/No sabe\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1584,
+        -32
+      ],
+      "id": "150b8d50-0a70-423a-9178-5a1b29eea875",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Preserve Context').first().json;\n\nreturn [{\n  json: {\n    paso_actual: data.fase_sugerida,\n    nombre: data.nombre_detectado,\n    clasificacion: data.analisis_lead.clasificacion,\n    razon_corta: data.analisis_lead.razon_corta,\n    tipo_negocio: data.analisis_lead.tipo_negocio,\n    tamano_equipo: data.analisis_lead.tamano_equipo,\n    problema_principal: data.analisis_lead.problema_principal,\n    urgencia: data.analisis_lead.urgencia,\n    presupuesto: data.analisis_lead.presupuesto,\n    whatsapp_id: data.whatsapp_id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -304
+      ],
+      "id": "c73c5c9b-1505-4896-bbf1-833b717ffbc5",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paso_actual": "={{ $json.paso_actual }}",
+            "whatsapp_id": "={{ $json.whatsapp_id }}",
+            "nombre": "={{ $('Preserve Context').first().json.nombre_detectado ? $('Preserve Context').first().json.nombre_detectado : undefined }}",
+            "actualizado_en": "={{ $now.format('dd-MM-yyyy') }}",
+            "clasificacion": "={{ $json.clasificacion }}",
+            "resumen_conversacion": "={{ $json.razon_corta }}",
+            "tipo_negocio": "={{ $json.tipo_negocio }}",
+            "tamano_equipo": "={{ $json.tamano_equipo }}",
+            "problema_principal": "={{ $json.problema_principal }}",
+            "urgencia": "={{ $json.urgencia }}",
+            "presupuesto": "={{ $json.presupuesto }}",
+            "telefono": "={{ $('Preserve Context').item.json.telefono_limpio }}"
+          },
+          "matchingColumns": [
+            "whatsapp_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "respuestas",
+              "displayName": "respuestas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "creado_en",
+              "displayName": "creado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "actualizado_en",
+              "displayName": "actualizado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "clasificacion",
+              "displayName": "clasificacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bot_activo",
+              "displayName": "bot_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resumen_conversacion",
+              "displayName": "resumen_conversacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_negocio",
+              "displayName": "tipo_negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tamano_equipo",
+              "displayName": "tamano_equipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "problema_principal",
+              "displayName": "problema_principal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "presupuesto",
+              "displayName": "presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "razon_corta",
+              "displayName": "razon_corta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        128,
+        -304
+      ],
+      "id": "4f1783bb-68c1-40aa-9f0a-87b9b759bbbf",
+      "name": "Actualizar Lead en Postgres",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5faaf7eb-8bdb-4279-805e-5999d3c4169e",
+              "leftValue": "={{ $('AI Agent1').item.json.output.analisis_lead.clasificacion }}",
+              "rightValue": "HOT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "1290a5fc-4e8f-459f-8508-e1a5c80b7d79",
+              "leftValue": "={{ $json.estado }}",
+              "rightValue": "alertado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        -112
+      ],
+      "id": "4bb36267-2a39-4aec-a7ed-06d16fc18cb3",
+      "name": "Es un Lead Caliente?"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#alertas-leadcaliente",
+          "mode": "name"
+        },
+        "text": "=🔥 *LEAD CALIFICADO DETECTADO* 🔥\n\n👤 *Nombre:* {{ $('Preserve Context').first().json.nombre_detectado }}\n🏢 *Negocio:* {{ $('Preserve Context').first().json.analisis_lead.tipo_negocio }}\n👥 *Tamaño:* {{ $('Preserve Context').first().json.analisis_lead.tamano_equipo }}\n⚠️ *Problema:* {{ $('Preserve Context').first().json.analisis_lead.problema_principal }}\n\n🌡️ *Urgencia:* {{ $('Preserve Context').first().json.analisis_lead.urgencia }}\n💰 *Presupuesto:* {{ $('Preserve Context').first().json.analisis_lead.presupuesto }}\n\n📝 *Resumen:* {{ $('Preserve Context').first().json.analisis_lead.razon_corta }}\n\n🔗 <https://wa.me/{{ $json.telefono }}|Ir al Chat>",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        656,
+        -128
+      ],
+      "id": "dba3ceb3-a4d9-41ed-b701-9b2176537f21",
+      "name": "Alerta en Slack",
+      "webhookId": "b5e3e326-3ae6-4b98-a8ca-c4e9fe9c0758",
+      "credentials": {
+        "slackApi": {
+          "id": "XPiKeH3enWqiCTr3",
+          "name": "Slack account - Zentryx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT estado FROM leads WHERE whatsapp_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2192,
+        -352
+      ],
+      "id": "048377c3-9231-4cc6-9fb7-143423b016d9",
+      "name": "Leer estado del lead",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_id": "={{ $('Code in JavaScript').item.json.whatsapp_id }}",
+            "estado": "=alertado"
+          },
+          "matchingColumns": [
+            "whatsapp_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "respuestas",
+              "displayName": "respuestas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "creado_en",
+              "displayName": "creado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "actualizado_en",
+              "displayName": "actualizado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "clasificacion",
+              "displayName": "clasificacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "bot_activo",
+              "displayName": "bot_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resumen_conversacion",
+              "displayName": "resumen_conversacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "tipo_negocio",
+              "displayName": "tipo_negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "tamano_equipo",
+              "displayName": "tamano_equipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "problema_principal",
+              "displayName": "problema_principal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "presupuesto",
+              "displayName": "presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        864,
+        -128
+      ],
+      "id": "4382eab4-5528-4a12-9ba0-9177d5346550",
+      "name": "Actualizar a estado",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Leer estado del lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preserve Context": {
+      "main": [
+        [
+          {
+            "node": "Split Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Messages": {
+      "main": [
+        [
+          {
+            "node": "Calculate Wait Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Wait Time": {
+      "main": [
+        [
+          {
+            "node": "Wait Dinámico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Dinámico": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Sent Messages": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Preserve Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Lead en Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Lead en Postgres": {
+      "main": [
+        [
+          {
+            "node": "Es un Lead Caliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es un Lead Caliente?": {
+      "main": [
+        [
+          {
+            "node": "Alerta en Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerta en Slack": {
+      "main": [
+        [
+          {
+            "node": "Actualizar a estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado del lead": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "versionId": "353510e6-b3d5-4dbc-9fdb-2e3d1d2f7fd0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "3gR60YDbhVJ3Ynrp",
+  "tags": []
+}

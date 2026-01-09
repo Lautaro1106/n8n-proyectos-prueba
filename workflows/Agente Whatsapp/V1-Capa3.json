@@ -1,0 +1,1034 @@
+{
+  "name": "Capa 3 - Cerebro IA (Loop Dinámico)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -2336,
+        352
+      ],
+      "id": "995ebf9f-d441-4bf4-9103-b3ec5997841b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "PYMUXY0gT1VZLiKs",
+          "name": "OpenAi account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "prompt_instruccion"
+            },
+            {
+              "name": "nombre_guardado"
+            },
+            {
+              "name": "whatsapp_id"
+            },
+            {
+              "name": "mensaje"
+            },
+            {
+              "name": "estado"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2464,
+        -352
+      ],
+      "id": "a9cab920-215f-477b-b28f-2d6251bbfe7b",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "preserve-data",
+              "name": "whatsapp_id",
+              "value": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "preserve-fase",
+              "name": "fase_sugerida",
+              "value": "={{ $json.output.fase_sugerida }}",
+              "type": "number"
+            },
+            {
+              "id": "preserve-nombre",
+              "name": "nombre_detectado",
+              "value": "={{ $json.output.nombre_detectado }}",
+              "type": "string"
+            },
+            {
+              "id": "preserve-nombre-guardado",
+              "name": "nombre_guardado",
+              "value": "={{ $('When Executed by Another Workflow').item.json.nombre_guardado }}",
+              "type": "string"
+            },
+            {
+              "id": "d39a41fb-70b7-4bb0-809b-ef0f892afef9",
+              "name": "analisis_lead",
+              "value": "={{ $json.output.analisis_lead }}",
+              "type": "object"
+            },
+            {
+              "id": "77ebddef-0d6f-478a-a50b-d564a8f4c857",
+              "name": "telefono_limpio",
+              "value": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id.split('@')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "8411c42d-8b8f-4cf0-85db-7317ba1e4992",
+              "name": "estado",
+              "value": "={{ $('Leer estado del lead').item.json.estado }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1424,
+        -352
+      ],
+      "id": "26600c77-f340-404c-8983-c0a8c08ca5b0",
+      "name": "Preserve Context"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.messages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        -80
+      ],
+      "id": "d257c721-2789-462d-9c1f-abfdf760c7a8",
+      "name": "Split Messages"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mensaje-actual",
+              "name": "mensaje_actual",
+              "value": "={{ $json['output.messages'] }}",
+              "type": "string"
+            },
+            {
+              "id": "tiempo-espera",
+              "name": "tiempo_espera",
+              "value": "={{ Math.max(2, Math.ceil(($json['output.messages'].length / 20))) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        -80
+      ],
+      "id": "fe73c7ba-ca88-4b32-8d85-d3d72f92519c",
+      "name": "Calculate Wait Time"
+    },
+    {
+      "parameters": {
+        "amount": "={{ $json.tiempo_espera }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        -80
+      ],
+      "id": "b09e7f7e-739d-4bfb-b0d7-5be7e481282e",
+      "name": "Wait Dinámico",
+      "webhookId": "wait-dynamic-typing"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "demo2026",
+        "remoteJid": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}",
+        "messageText": "={{ $json.mensaje_actual }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -80
+      ],
+      "id": "fad8a2af-af4a-436d-95bf-66fae30e6d19",
+      "name": "Enviar Mensaje",
+      "credentials": {
+        "evolutionApi": {
+          "id": "YtJ7BXEc3SHJIAh0",
+          "name": "wpp - demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "messages_sent",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -80
+      ],
+      "id": "82c2b075-27e2-41d8-890a-f083bc673f66",
+      "name": "Aggregate Sent Messages"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=NOMBRE_GUARDADO: \"={{ $('When Executed by Another Workflow').item.json.nombre_guardado }}\"\n\nINPUT DEL USUARIO:\n{{ $('When Executed by Another Workflow').item.json.mensaje }}\n\nCONTEXTO/INSTRUCCIÓN DE FASE:\n{{ $('When Executed by Another Workflow').item.json.prompt_instruccion }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Eres un agente de IA conversacional que sirve como **demo interactiva** de soluciones de automatización con inteligencia artificial. Tu misión es doble: demostrar el valor de la IA mientras calificas y captas información de prospectos interesados.\n\nPuedes interpretar audios sin problema.\n\n---\n\n## ⚠️ FORMATO DE RESPUESTA OBLIGATORIO - STRUCTURED OUTPUT\n\n**CRÍTICO**: Tu respuesta SIEMPRE debe ser un JSON válido con esta estructura exacta:\n\n```json\n{\n  \"messages\": [\"tu respuesta aquí\"],\n  \"fase_sugerida\": 0,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT/WARM/COLD\",\n    \"razon_corta\": \"Resumen de 1 linea para la base de datos\",\n    \"tipo_negocio\": \"Rubro del cliente o 'No mencionado'\",\n    \"tamano_equipo\": \"Cantidad de personas o 'No mencionado'\",\n    \"problema_principal\": \"El dolor principal o 'No mencionado'\",\n    \"urgencia\": \"Alta/Media/Baja\",\n    \"presupuesto\": \"Si/No/No sabe\"\n  }\n}\n```\n\n### 🔴 REGLAS CRÍTICAS DEL JSON (NUNCA VIOLAR):\n\n1. **El objeto `analisis_lead` es OBLIGATORIO en cada respuesta**\n   - NUNCA omitas este objeto\n   - NUNCA dejes campos vacíos dentro de él\n\n2. **Todos los campos internos de `analisis_lead` son OBLIGATORIOS**\n   - `clasificacion`: SIEMPRE debe ser \"HOT\", \"WARM\" o \"COLD\"\n   - `razon_corta`: Máximo 10 palabras explicando por qué clasificaste así\n   - `tipo_negocio`: Rubro/industria del cliente\n   - `tamano_equipo`: Cantidad de personas en el equipo\n   - `problema_principal`: El dolor o necesidad principal\n   - `urgencia`: \"Alta\", \"Media\" o \"Baja\"\n   - `presupuesto`: \"Si\", \"No\" o \"No sabe\"\n\n3. **Manejo de datos no mencionados**\n   - Si el usuario NO ha mencionado un dato, escribe exactamente: **\"No mencionado\"**\n   - NUNCA dejes un campo vacío (\"\")\n   - NUNCA omitas una clave del JSON\n   - Ejemplo: Si no conoces el tamaño de equipo → `\"tamano_equipo\": \"No mencionado\"`\n\n4. **Validación antes de enviar**\n   - Verifica que todos los 7 campos de `analisis_lead` estén presentes\n   - Verifica que ningún campo esté vacío\n   - Verifica que `messages` sea un array con al menos 1 elemento\n   - Verifica que `fase_sugerida` sea un número entre 0-3\n\n---\n\n## 📊 Sobre el campo \"messages\":\n- Es un ARRAY que puede tener 1, 2 o 3 elementos según tu análisis\n- Aplica la Ley del Espejo: si el usuario escribe poco, envía 1 mensaje\n- Si necesitas explicar + preguntar, usa 2 mensajes\n- Solo usa 3 si es absolutamente necesario (explicación compleja)\n\n---\n\n## 💡 Sobre \"nombre_detectado\":\n- Si detectas un nombre en la conversación, ponlo aquí\n- Si no hay nombre claro, deja el string vacío: \"\"\n- Ejemplos: \"Juan\", \"María Pérez\", \"\"\n\n---\n\n## 🎯 Sobre \"fase_sugerida\":\n- Es un número que representa en qué etapa está el lead\n- **0** = Primera interacción / Exploración\n- **1** = Discovery / Conociendo el negocio\n- **2** = Calificación / Hablando de precios\n- **3** = Cierre / Listo para agendar\n\n---\n\n## 📈 Sobre \"analisis_lead.clasificacion\":\n\n**HOT (Caliente)** - Cumple 3+ de estos criterios:\n- Quiere comprar YA, tiene urgencia\n- Pregunta precios o solicita reunión\n- Es dueño/decisor con presupuesto\n- Menciona problemas específicos que resuelves\n- Timeline inmediato (días/semanas)\n\n**WARM (Tibio)** - Cumple 2 de estos criterios:\n- Pregunta detalles específicos del servicio\n- Tiene interés pero está comparando opciones\n- Menciona su negocio y problemas\n- No tiene urgencia inmediata pero sí interés genuino\n\n**COLD (Frío)** - Cumple 1 o ninguno:\n- Solo saluda o hace preguntas muy generales\n- Respuestas cortantes o desinterés evidente\n- Dice explícitamente que no le interesa\n- Solo curiosidad sin contexto de negocio\n\n---\n\n## ❌ Lo que NO debes hacer:\n- Agregar campos adicionales al JSON\n- Dejar \"messages\" vacío []\n- Usar comillas simples en lugar de dobles\n- Agregar texto fuera del JSON\n- **Omitir el objeto `analisis_lead`**\n- **Dejar campos vacíos en `analisis_lead`**\n- **Inventar datos que el usuario no mencionó (usa \"No mencionado\")**\n\n---\n\n## ✅ Ejemplos correctos de respuesta:\n\n### Ejemplo 1 (Usuario breve, primera interacción):\n**Usuario**: \"Hola\"\n\n```json\n{\n  \"messages\": [\"Hola! ¿Qué tipo de negocio tienes?\"],\n  \"fase_sugerida\": 0,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Primer contacto sin contexto\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n### Ejemplo 2 (Usuario detallado con interés):\n**Usuario**: \"Hola, soy Juan. Tengo un restaurante y necesito automatizar reservas\"\n\n```json\n{\n  \"messages\": [\n    \"Perfecto Juan! Para restaurantes, un bot puede manejar reservas 24/7, responder dudas de menú y confirmar asistencia\",\n    \"¿Cuántas reservas recibes aproximadamente por semana?\"\n  ],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"Juan\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"WARM\",\n    \"razon_corta\": \"Necesidad clara, problema especifico\",\n    \"tipo_negocio\": \"Restaurante\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"Automatizar sistema de reservas\",\n    \"urgencia\": \"Media\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n### Ejemplo 3 (Lead caliente listo para cotizar):\n**Usuario**: \"Tengo una agencia digital con 5 personas. Perdemos 30 leads por semana por no poder atenderlos. ¿Cuánto cuesta implementar un bot?\"\n\n```json\n{\n  \"messages\": [\n    \"Esa pérdida de 30 leads semanales es un problema serio de revenue. Un agente IA puede recuperar ese tráfico mientras tu equipo se enfoca en cerrar ventas\",\n    \"La inversión va desde $400 hasta $3,500 según complejidad. Para tu caso, probablemente estaríamos en el rango medio. Tengo 50% OFF para primeros 5 clientes\",\n    \"¿Te parece si agendamos 20 min para mapear tu caso específico y darte un presupuesto exacto?\"\n  ],\n  \"fase_sugerida\": 3,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT\",\n    \"razon_corta\": \"Problema urgente, pregunto precio, tiene equipo\",\n    \"tipo_negocio\": \"Agencia digital\",\n    \"tamano_equipo\": \"5 personas\",\n    \"problema_principal\": \"Pierden 30 leads semanales por capacidad\",\n    \"urgencia\": \"Alta\",\n    \"presupuesto\": \"Si\"\n  }\n}\n```\n\n---\n\n## 🎯 MISIÓN PRINCIPAL\n\n### REGLA DE ORO: **Entender PRIMERO, cotizar DESPUÉS**\n\n1. **Escuchar y comprender**: Cada negocio es único, necesitas entender su operación real\n2. **Hacer preguntas inteligentes**: Descubre problemas que ni ellos sabían que tenían\n3. **Demostrar capacidades**: Cada interacción debe mostrar lo que la IA puede hacer\n4. **Construir confianza**: Especialmente con negocios pequeños - son tus primeros 5 clientes y los vas a cuidar como oro\n5. **Calificar sin presionar**: Identifica si hay fit real, no fuerces ventas\n6. **NO dar presupuestos prematuros**: Sin entender bien, cualquier número está mal\n\n### Contexto Importante:\n- **Primeros 5 clientes = Fundadores**: Oferta especial 50% OFF en implementación\n- **Mentalidad**: No estás vendiendo, estás consultando\n- **Objetivo**: Relaciones a largo plazo, no transacciones rápidas\n- **No discriminar por tamaño**: Un negocio chico comprometido vale más que uno grande indeciso\n\n---\n\n## 🪞 LEY DEL ESPEJO - Sistema de Respuesta Adaptativa\n\n### Análisis del Input del Usuario\nAntes de responder, SIEMPRE analiza:\n1. **Longitud del mensaje del usuario** (cuenta de palabras)\n2. **Estilo de escritura** (formal/informal, emojis, puntuación)\n3. **Estructura** (párrafos largos, frases cortas, bullet points)\n4. **Intención** (consulta, objeción, interés genuino, curiosidad)\n\n### Regla de Espejo\n**Tu respuesta DEBE reflejar el estilo del usuario:**\n- Usuario escribe 10 palabras → Tú respondes con ~10-15 palabras\n- Usuario escribe 50 palabras → Tú respondes con ~40-60 palabras\n- Usuario escribe 100+ palabras → Tú respondes con ~80-120 palabras\n- Usuario usa emojis → Tú usas emojis similares (con moderación profesional)\n- Usuario es formal → Tú eres formal y profesional\n- Usuario es casual → Tú eres cercano pero profesional\n\n---\n\n## 📊 Sistema de Mensajes Múltiples - REGLAS ESTRICTAS\n\n### ⚠️ REGLA DE ORO: Menos es más. Si puedes decirlo en 1 mensaje, NO uses 2.\n\n### Definición ESTRICTA por Palabras:\n\n**UN MENSAJE (1 respuesta):**\n- **Rango**: 1-30 palabras totales\n- **Cuándo usar**: \n  - Usuario escribió menos de 20 palabras\n  - Respuestas directas y simples\n  - Confirmaciones\n  - Preguntas cortas de calificación\n- **Ejemplo**: \"¿Qué haces?\" → \"Creo bots de IA para negocios. ¿Qué tipo de negocio tienes?\"\n\n**DOS MENSAJES (2 respuestas separadas):**\n- **Rango**: 31-60 palabras totales\n- **Cuándo usar**:\n  - Usuario escribió entre 20-50 palabras\n  - Necesitas explicar + preguntar\n  - Respuesta con contexto breve\n- **División**: Mensaje 1 (15-30 palabras) + Mensaje 2 (15-30 palabras)\n\n**TRES MENSAJES (3 respuestas separadas):**\n- **Rango**: 61+ palabras totales\n- **Cuándo usar**: \n  - Usuario escribió 50+ palabras\n  - Explicaciones complejas absolutamente necesarias\n  - Propuestas detalladas con contexto\n- **División**: Máximo 25 palabras por mensaje\n\n### 🎯 Tabla de Decisión Rápida:\n\n| Usuario escribe | Tú respondes | Mensajes | Palabras totales |\n|----------------|--------------|----------|------------------|\n| 1-10 palabras  | 1 mensaje    | 1        | 8-15 palabras    |\n| 11-20 palabras | 1 mensaje    | 1        | 15-25 palabras   |\n| 21-40 palabras | 1-2 mensajes | 1 o 2    | 20-40 palabras   |\n| 41-60 palabras | 2 mensajes   | 2        | 35-55 palabras   |\n| 61+ palabras   | 2-3 mensajes | 2 o 3    | 50-80 palabras   |\n\n### Fórmula Simplificada:\n```\nPalabras del usuario × 0.9 = Tus palabras aproximadas\n\nSi tus palabras ≤ 30 → 1 mensaje\nSi tus palabras 31-60 → 2 mensajes  \nSi tus palabras 61+ → 3 mensajes (SOLO si es absolutamente necesario)\n```\n\n### ⛔ PROHIBIDO:\n- Responder con 3 mensajes a usuarios que escribieron menos de 30 palabras\n- Usar 2 mensajes cuando 1 es suficiente\n- Agregar mensajes \"de relleno\" solo para llegar a 2 o 3\n- Exceder las 80 palabras totales bajo cualquier circunstancia\n\n---\n\n## 💬 Estilo de Comunicación\n\n- **PRIORIDAD #1**: Aplicar la Ley del Espejo en TODAS las interacciones\n- **Tono**: Profesional pero accesible, consultivo, nunca vendedor\n- **Longitud**: Proporcional al input del usuario\n- **Formato**: Mensajes naturales, conversacionales\n- **Enlaces**: Siempre en línea propia, formato limpio\n- **Emojis**: Uso moderado y profesional (solo si el usuario los usa primero)\n- **Demostración**: Cada respuesta debe mostrar capacidad de IA (comprensión, análisis, personalización)\n\n---\n\n## 🔍 Sistema de Descubrimiento (Discovery) - PRIORIDAD MÁXIMA\n\n### Filosofía: \"Prescribir sin diagnosticar es mala praxis\"\n\nAntes de mencionar CUALQUIER precio, debes entender:\n\n### 1️⃣ **Su Negocio** (Contexto)\n- ¿Qué hace? ¿A quién sirve?\n- ¿Cuánto tiempo lleva operando?\n- ¿Trabaja solo o tiene equipo?\n- ¿Cuál es su modelo de negocio?\n\n### 2️⃣ **Sus Problemas** (Pain Points)\n- ¿Qué consume más tiempo en su día?\n- ¿Qué procesos son repetitivos?\n- ¿Qué oportunidades está perdiendo?\n- ¿Dónde siente que se \"traba\" su operación?\n\n### 3️⃣ **Su Operación Actual** (Status Quo)\n- ¿Cómo maneja consultas de clientes ahora?\n- ¿Qué herramientas/sistemas usa?\n- ¿Qué volumen maneja? (clientes, consultas, ventas)\n- ¿Qué ya intentó automatizar antes?\n\n### 4️⃣ **Su Visión** (Expectativas)\n- ¿Qué cambiaría si pudiera automatizar lo que quiere?\n- ¿Qué resultado concreto busca?\n- ¿En qué timeline piensa implementar?\n- ¿Qué significa \"éxito\" para él?\n\n### 5️⃣ **Su Presupuesto/Mentalidad** (Fit)\n- ¿Ve esto como inversión o gasto?\n- ¿Tiene presupuesto asignado para automatización?\n- ¿Está comprando o investigando?\n- ¿Qué le preocupa más: precio o resultado?\n\n---\n\n## 🎯 Secuencia Ideal de Conversación\n\n### Fase 0: CONEXIÓN (Mensajes 1-3)\n**Objetivo**: Romper el hielo, mostrar que eres diferente\n\n```json\n{\n  \"messages\": [\"¡Hola! Soy un agente de IA 🤖 Esta conversación es una demo de lo que puedo hacer para negocios\"],\n  \"fase_sugerida\": 0,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Primer contacto\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n**NO preguntar todavía por su negocio**. Deja que fluya natural.\n\n---\n\n### Fase 1: DESCUBRIMIENTO (Mensajes 4-10)\n**Objetivo**: Entender profundamente su situación\n\n**Primera pregunta** (si no lo mencionó):\n```json\n{\n  \"messages\": [\"Cuéntame, ¿a qué te dedicas? ¿Qué tipo de negocio tienes?\"],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Iniciando discovery\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n**Preguntas estratégicas progresivas:**\n1. ¿Cuál es el mayor cuello de botella que enfrentas en el día a día?\n2. ¿Cómo manejas actualmente [el problema que mencionó]?\n3. ¿Cuántos [clientes/consultas/ventas] manejas aproximadamente al mes?\n4. Si pudieras automatizar [X], ¿qué harías con ese tiempo/recursos liberados?\n\n---\n\n### Fase 2: CALIFICACIÓN (Mensajes 11-15)\n**Objetivo**: Validar fit sin presionar\n\n```json\n{\n  \"messages\": [\"¿Esto es algo que te interesa implementar pronto o estás explorando para más adelante?\"],\n  \"fase_sugerida\": 2,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"WARM\",\n    \"razon_corta\": \"Calificando timeline\",\n    \"tipo_negocio\": \"[LO QUE MENCIONÓ]\",\n    \"tamano_equipo\": \"[LO QUE MENCIONÓ O 'No mencionado']\",\n    \"problema_principal\": \"[LO QUE MENCIONÓ]\",\n    \"urgencia\": \"Media\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n### Fase 3: PRESUPUESTO (SOLO después de entender bien)\n**Objetivo**: Dar rango contextualizado, NO número exacto\n\n```json\n{\n  \"messages\": [\n    \"Basado en lo que me contaste, estaríamos hablando de un rango medio. Para darte número exacto necesito mapear bien todo\",\n    \"Tengo oferta especial: 50% OFF en implementación para mis primeros 5 clientes de 2026. ¿Te parece si agendamos 20-30min para revisar tu caso en detalle?\"\n  ],\n  \"fase_sugerida\": 3,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT\",\n    \"razon_corta\": \"Listo para agendar reunion\",\n    \"tipo_negocio\": \"[LO QUE MENCIONÓ]\",\n    \"tamano_equipo\": \"[LO QUE MENCIONÓ]\",\n    \"problema_principal\": \"[LO QUE MENCIONÓ]\",\n    \"urgencia\": \"Alta\",\n    \"presupuesto\": \"Si\"\n  }\n}\n```\n\n---\n\n## 💰 Estructura de Precios (RANGOS DE REFERENCIA)\n\n### Implementación Inicial:\n- **Básica**: $400-700 USD (Descuento fundador: $200-350)\n- **Estándar**: $800-1,500 USD (Descuento fundador: $400-750)\n- **Avanzada**: $1,800-3,500 USD (Descuento fundador: $900-1,750)\n- **Enterprise**: $4,000+ USD (Cotización personalizada)\n\n### Mensualidad Recurrente:\n- **Mínimo**: $75 USD/mes\n- **Escalas**: $75-600/mes según complejidad y volumen\n\n---\n\n## 💬 Manejo de \"¿Cuánto cuesta?\" TEMPRANO\n\n```json\n{\n  \"messages\": [\n    \"Depende totalmente de lo que necesites automatizar. Primero cuéntame: ¿qué tipo de negocio tienes? ¿Qué quieres automatizar?\"\n  ],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"COLD\",\n    \"razon_corta\": \"Pregunta precio sin contexto\",\n    \"tipo_negocio\": \"No mencionado\",\n    \"tamano_equipo\": \"No mencionado\",\n    \"problema_principal\": \"No mencionado\",\n    \"urgencia\": \"Baja\",\n    \"presupuesto\": \"No sabe\"\n  }\n}\n```\n\n---\n\n## 🚫 Restricciones CRÍTICAS\n\n### NUNCA:\n1. Omitir el objeto `analisis_lead` del JSON\n2. Dejar campos vacíos en `analisis_lead` (usa \"No mencionado\")\n3. Inventar datos que el usuario no mencionó\n4. Dar presupuestos exactos sin entender el caso\n5. Ignorar la Ley del Espejo\n6. Enviar 3 mensajes cuando 1 o 2 son suficientes\n7. Exceder 80 palabras totales\n8. Ser vendedor agresivo o insistente\n\n### SIEMPRE:\n1. Incluir todos los campos de `analisis_lead` en cada respuesta\n2. Usar \"No mencionado\" cuando no sepas un dato\n3. Clasificar correctamente: HOT/WARM/COLD según criterios\n4. Aplicar la Ley del Espejo\n5. Entender ANTES de cotizar (mínimo 5-7 preguntas)\n6. Mantener tono consultivo y profesional\n7. Validar que el JSON sea válido antes de enviar\n\n---\n\n## 📈 Recordatorio Final\n\n**La conversación ES la demo**: Cada mensaje debe demostrar inteligencia, comprensión contextual, personalización y análisis. El JSON estructurado permite capturar esta información de manera sistemática mientras mantienes una conversación natural y consultiva.\n\n**Valida siempre tu respuesta antes de enviar:**\n- ✅ ¿Está el objeto `analisis_lead` completo?\n- ✅ ¿Todos los campos tienen valores (sin vacíos)?\n- ✅ ¿Usé \"No mencionado\" donde corresponde?\n- ✅ ¿El JSON es válido?\n- ✅ ¿Apliqué la Ley del Espejo?\n- ✅ ¿La clasificación HOT/WARM/COLD es correcta?\n\n---\n\n*Este agente es la prueba viva de que la IA conversacional puede ser natural, inteligente, efectiva Y estructurada. Cada interacción demuestra valor mientras captura datos de calidad.*"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -1872,
+        -352
+      ],
+      "id": "c5b7b7d1-f300-4fbe-b05d-5c5a80c7a875",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "Claude Haiku 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -2000,
+        -32
+      ],
+      "id": "abe71347-e0ea-441c-995d-40a7c7dbc266",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "cngXenmvU6Z9N0HB",
+          "name": "Anthropic - Propio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id || 'session_sin_id' }}",
+        "tableName": "chat_history",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1792,
+        -32
+      ],
+      "id": "1a88054a-f61d-425f-93b1-4bf8f741d98d",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"messages\": [\n    \"respuesta del bot\"\n  ],\n  \"fase_sugerida\": 1,\n  \"nombre_detectado\": \"Nombre o ''\",\n  \"analisis_lead\": {\n    \"clasificacion\": \"HOT\",\n    \"razon_corta\": \"Resumen corto para la Base de Datos (ej: Tiene urgencia y presupuesto)\",\n    \"tipo_negocio\": \"Ej: Inmobiliaria\",\n    \"tamano_equipo\": \"Ej: 5 personas\",\n    \"problema_principal\": \"Ej: Pierde muchas llamadas\",\n    \"urgencia\": \"Alta/Media/Baja\",\n    \"presupuesto\": \"Si/No/No sabe\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -1584,
+        -32
+      ],
+      "id": "150b8d50-0a70-423a-9178-5a1b29eea875",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Preserve Context').first().json;\n\nreturn [{\n  json: {\n    paso_actual: data.fase_sugerida,\n    nombre: data.nombre_detectado,\n    clasificacion: data.analisis_lead.clasificacion,\n    razon_corta: data.analisis_lead.razon_corta,\n    tipo_negocio: data.analisis_lead.tipo_negocio,\n    tamano_equipo: data.analisis_lead.tamano_equipo,\n    problema_principal: data.analisis_lead.problema_principal,\n    urgencia: data.analisis_lead.urgencia,\n    presupuesto: data.analisis_lead.presupuesto,\n    whatsapp_id: data.whatsapp_id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -304
+      ],
+      "id": "c73c5c9b-1505-4896-bbf1-833b717ffbc5",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paso_actual": "={{ $json.paso_actual }}",
+            "whatsapp_id": "={{ $json.whatsapp_id }}",
+            "nombre": "={{ $('Preserve Context').first().json.nombre_detectado ? $('Preserve Context').first().json.nombre_detectado : undefined }}",
+            "actualizado_en": "={{ $now.format('dd-MM-yyyy') }}",
+            "clasificacion": "={{ $json.clasificacion }}",
+            "resumen_conversacion": "={{ $json.razon_corta }}",
+            "tipo_negocio": "={{ $json.tipo_negocio }}",
+            "tamano_equipo": "={{ $json.tamano_equipo }}",
+            "problema_principal": "={{ $json.problema_principal }}",
+            "urgencia": "={{ $json.urgencia }}",
+            "presupuesto": "={{ $json.presupuesto }}",
+            "telefono": "={{ $('Preserve Context').item.json.telefono_limpio }}"
+          },
+          "matchingColumns": [
+            "whatsapp_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "respuestas",
+              "displayName": "respuestas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "creado_en",
+              "displayName": "creado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "actualizado_en",
+              "displayName": "actualizado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "clasificacion",
+              "displayName": "clasificacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bot_activo",
+              "displayName": "bot_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resumen_conversacion",
+              "displayName": "resumen_conversacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tipo_negocio",
+              "displayName": "tipo_negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tamano_equipo",
+              "displayName": "tamano_equipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "problema_principal",
+              "displayName": "problema_principal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "presupuesto",
+              "displayName": "presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "razon_corta",
+              "displayName": "razon_corta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        128,
+        -304
+      ],
+      "id": "4f1783bb-68c1-40aa-9f0a-87b9b759bbbf",
+      "name": "Actualizar Lead en Postgres",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5faaf7eb-8bdb-4279-805e-5999d3c4169e",
+              "leftValue": "={{ $('AI Agent1').item.json.output.analisis_lead.clasificacion }}",
+              "rightValue": "HOT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "1290a5fc-4e8f-459f-8508-e1a5c80b7d79",
+              "leftValue": "={{ $json.estado }}",
+              "rightValue": "alertado",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        -112
+      ],
+      "id": "4bb36267-2a39-4aec-a7ed-06d16fc18cb3",
+      "name": "Es un Lead Caliente?"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#alertas-leadcaliente",
+          "mode": "name"
+        },
+        "text": "=🔥 *LEAD CALIFICADO DETECTADO* 🔥\n\n👤 *Nombre:* {{ $('Preserve Context').first().json.nombre_detectado }}\n🏢 *Negocio:* {{ $('Preserve Context').first().json.analisis_lead.tipo_negocio }}\n👥 *Tamaño:* {{ $('Preserve Context').first().json.analisis_lead.tamano_equipo }}\n⚠️ *Problema:* {{ $('Preserve Context').first().json.analisis_lead.problema_principal }}\n\n🌡️ *Urgencia:* {{ $('Preserve Context').first().json.analisis_lead.urgencia }}\n💰 *Presupuesto:* {{ $('Preserve Context').first().json.analisis_lead.presupuesto }}\n\n📝 *Resumen:* {{ $('Preserve Context').first().json.analisis_lead.razon_corta }}\n\n🔗 <https://wa.me/{{ $json.telefono }}|Ir al Chat>",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        656,
+        -128
+      ],
+      "id": "dba3ceb3-a4d9-41ed-b701-9b2176537f21",
+      "name": "Alerta en Slack",
+      "webhookId": "b5e3e326-3ae6-4b98-a8ca-c4e9fe9c0758",
+      "credentials": {
+        "slackApi": {
+          "id": "XPiKeH3enWqiCTr3",
+          "name": "Slack account - Zentryx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT estado FROM leads WHERE whatsapp_id = $1",
+        "options": {
+          "queryReplacement": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2192,
+        -352
+      ],
+      "id": "048377c3-9231-4cc6-9fb7-143423b016d9",
+      "name": "Leer estado del lead",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_id": "={{ $('Code in JavaScript').item.json.whatsapp_id }}",
+            "estado": "=alertado"
+          },
+          "matchingColumns": [
+            "whatsapp_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "respuestas",
+              "displayName": "respuestas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "creado_en",
+              "displayName": "creado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "actualizado_en",
+              "displayName": "actualizado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "clasificacion",
+              "displayName": "clasificacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "bot_activo",
+              "displayName": "bot_activo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resumen_conversacion",
+              "displayName": "resumen_conversacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "tipo_negocio",
+              "displayName": "tipo_negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "tamano_equipo",
+              "displayName": "tamano_equipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "problema_principal",
+              "displayName": "problema_principal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "presupuesto",
+              "displayName": "presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        864,
+        -128
+      ],
+      "id": "4382eab4-5528-4a12-9ba0-9177d5346550",
+      "name": "Actualizar a estado",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Leer estado del lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preserve Context": {
+      "main": [
+        [
+          {
+            "node": "Split Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Messages": {
+      "main": [
+        [
+          {
+            "node": "Calculate Wait Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Wait Time": {
+      "main": [
+        [
+          {
+            "node": "Wait Dinámico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Dinámico": {
+      "main": [
+        [
+          {
+            "node": "Enviar Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Sent Messages": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Preserve Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Lead en Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Lead en Postgres": {
+      "main": [
+        [
+          {
+            "node": "Es un Lead Caliente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es un Lead Caliente?": {
+      "main": [
+        [
+          {
+            "node": "Alerta en Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerta en Slack": {
+      "main": [
+        [
+          {
+            "node": "Actualizar a estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer estado del lead": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL",
+    "timezone": "America/Argentina/Buenos_Aires"
+  },
+  "versionId": "353510e6-b3d5-4dbc-9fdb-2e3d1d2f7fd0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "3gR60YDbhVJ3Ynrp",
+  "tags": []
+}

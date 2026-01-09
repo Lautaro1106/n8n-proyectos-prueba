@@ -1,0 +1,1125 @@
+{
+  "name": "Demo IA Ventas - Recepción y Calificación",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0a031e8-4b9b-465a-99ad-8dbe4dc34440",
+              "leftValue": "={{ $json.body.data.messageType }}",
+              "rightValue": "audioMessage",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        -320
+      ],
+      "id": "d3670d2a-d8d9-48aa-95f3-84f39d40e8f8",
+      "name": "Se envía como texto"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data.base64",
+        "options": {
+          "fileName": "fe.ogg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        -96
+      ],
+      "id": "20403200-9e3d-409c-ad5c-43a231379adc",
+      "name": "Se convierte en archivo"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        336,
+        -96
+      ],
+      "id": "48be27b6-1702-4b96-ab7f-c1229d7d9847",
+      "name": "La IA lo transcribe a texto",
+      "credentials": {
+        "openAiApi": {
+          "id": "PYMUXY0gT1VZLiKs",
+          "name": "OpenAi account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "filter-from-me",
+              "leftValue": "={{ $json.body.data.key.fromMe }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4af1d890-d1d4-4de8-a3f0-155a111a466f",
+      "name": "Es mensaje del bot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        -416
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "is-text",
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "is-extended-text",
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "extendedTextMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto Extendido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "is-audio",
+                    "leftValue": "={{ $json.body.data.messageType }}",
+                    "rightValue": "audioMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "8e769fc7-39a0-4b62-902d-210f9cda6f18",
+      "name": "Tipo de Mensaje",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -320,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-whatsapp-id",
+              "name": "whatsapp_id",
+              "value": "={{ $('Webhook WA').item.json.body.data.key.remoteJid }}",
+              "type": "string"
+            },
+            {
+              "id": "field-nombre",
+              "name": "nombre_usuario",
+              "value": "={{ $('Webhook WA').item.json.body.data.pushName || 'Usuario' }}",
+              "type": "string"
+            },
+            {
+              "id": "field-mensaje",
+              "name": "mensaje",
+              "value": "={{ $json.text || $('Webhook WA').item.json.body.data.message.conversation || $('Webhook WA').item.json.body.data.message.extendedTextMessage?.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "field-timestamp",
+              "name": "timestamp",
+              "value": "={{ $('Webhook WA').item.json.body.data.messageTimestamp }}",
+              "type": "number"
+            },
+            {
+              "id": "field-message-id",
+              "name": "message_id",
+              "value": "={{ $('Webhook WA').item.json.body.data.key.id }}",
+              "type": "string"
+            },
+            {
+              "id": "e5265e23-a242-4bf5-83d1-86e00300a674",
+              "name": "instancia",
+              "value": "={{ $('Webhook WA').item.json.body.instance }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0e531963-51f6-42ea-b705-052e4ea40b7c",
+      "name": "Normalizar Campos",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        576,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// UNIFICADOR DE MENSAJES (Buffer Aggregator)\n// Demo IA Ventas - Sin PostgreSQL\n// ============================================\n\n// 1. Obtener todos los items del nodo anterior\nconst mensajes = $input.all();\n\n// 2. Si no hay mensajes, retornar vacío\nif (mensajes.length === 0) {\n  return [];\n}\n\n// 3. Agrupar por whatsapp_id (por si hay múltiples usuarios)\nconst grupos = {};\nfor (const msg of mensajes) {\n  const waId = msg.json.whatsapp_id;\n  if (!grupos[waId]) {\n    grupos[waId] = [];\n  }\n  grupos[waId].push(msg.json);\n}\n\n// 4. Procesar cada grupo de usuario\nconst resultados = [];\nfor (const [waId, msgs] of Object.entries(grupos)) {\n  \n  // Ordenar por timestamp\n  msgs.sort((a, b) => a.timestamp - b.timestamp);\n  \n  // Unificar textos con salto de línea\n  const textoUnificado = msgs\n    .map(m => m.mensaje)\n    .filter(t => t && t.trim())\n    .join('\\n');\n  \n  // Tomar el nombre del primer mensaje\n  const nombre = msgs[0].nombre_usuario;\n  \n  resultados.push({\n    json: {\n      whatsapp_id: waId,\n      nombre_usuario: nombre,\n      mensaje_unificado: textoUnificado,\n      cantidad_mensajes: msgs.length\n    }\n  });\n}\n\nreturn resultados;"
+      },
+      "id": "685085c4-00dd-4925-9914-96dd3b66ac14",
+      "name": "Unificar Mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-message",
+              "leftValue": "={{ $json.mensaje_unificado }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5cfa38bb-8a07-4dea-ab05-e5051d11b7f0",
+      "name": "Tiene mensaje?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔷 WORKFLOW: RECEPCIÓN Y NORMALIZACIÓN\n---\n**Flujo:**\n1. Recibe mensaje de WhatsApp\n2. Filtra mensajes del bot (fromMe)\n3. Detecta si es texto o audio\n4. Transcribe audio con Whisper\n5. Normaliza campos\n6. Buffer de 20s para agrupar mensajes\n7. Unifica y envía a Capa 2\n\n**Sin PostgreSQL - Todo en memoria**",
+        "height": 280,
+        "width": 400
+      },
+      "id": "b68ae010-2252-497e-8fe4-8fb8e932f75c",
+      "name": "Info",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        -848
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ CONFIGURAR\n---\n1. Cambiar credenciales Evolution API\n2. Cambiar credenciales OpenAI\n3. Cambiar ID del workflow Capa 2\n4. Registrar webhook en Evolution",
+        "height": 180,
+        "width": 408,
+        "color": 5
+      },
+      "id": "65c7fee5-07b9-433c-9dd6-ec7250512633",
+      "name": "Config",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1360,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "get-media-base64",
+        "instanceName": "=demo2026",
+        "messageId": "={{ $json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -96
+      ],
+      "id": "698a535c-8561-4c21-b017-ae9bbdaf911e",
+      "name": "Obtener Audio en Base 64",
+      "credentials": {
+        "evolutionApi": {
+          "id": "YtJ7BXEc3SHJIAh0",
+          "name": "wpp - demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "id": "15f1d06a-dae3-456e-bf1f-0dbb63a100b6",
+      "name": "Buffer 10s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        -224
+      ],
+      "webhookId": "buffer-wait-demo"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Nombre del perfil de WhatsApp: {{ $json.nombre_usuario }}\n\nMensaje del usuario:\n{{ $json.mensaje_unificado }}",
+        "options": {
+          "systemMessage": "=# IDENTIDAD\nEres \"Luna\", consultora senior de ventas en Zentryx. Eres directa, profesional y usas voseo (Argentina). No vendes por vender; tu misión es encontrar soluciones que realmente generen dinero o ahorren tiempo.\n\n# POLÍTICA DE ZENTRYX (Regla de Oro)\nEn Zentryx no hacemos proyectos que no tengan sentido financiero. Analizamos cada caso particular y si el ROI (Retorno de Inversión) no justifica la implementación, se lo decimos al cliente con total honestidad. No buscamos cobrar caro ni barato, buscamos precios JUSTOS.\n\n# TU MISIÓN\n1. Mantener una conversación fluida y natural con el potencial cliente\n2. Detectar y extraer estos datos cuando aparezcan orgánicamente:\n   - NOMBRE: El nombre real de la persona (no el pushName de WhatsApp si parece un alias)\n   - NEGOCIO: Que tipo de negocio o empresa tiene (rubro, actividad, etc) \n   - NECESIDAD: Qué problema quiere resolver o qué quiere automatizar\n   - PRESUPUESTO: Si menciona cuánto quiere/puede invertir\n   - URGENCIA: Qué tan pronto necesita resolver esto\n\n# REGLAS DE EXTRACCIÓN\n- NO preguntes todos los datos de golpe. Fluye naturalmente.\n- Si ya tienes el nombre de su perfil de WhatsApp, úsalo y pregunta si es correcto cuando sea natural\n- Detecta la urgencia por el tono:\n  * Palabras como \"urgente\", \"ya\", \"cuanto antes\", \"mañana\" = ALTA\n  * Palabras como \"estoy viendo opciones\", \"evaluando\" = MEDIA  \n  * Sin indicios de tiempo o \"no hay apuro\" = BAJA\n- El presupuesto solo si el usuario lo menciona espontáneamente o define un rango de precio\n- Prioriza: Nombre → Necesidad → Negocio → Presupuesto\n\n# IMPORTANTE\n\nTu respuesta debe ser EXCLUSIVAMENTE un objeto JSON válido. NO incluyas introducciones, NO incluyas conclusiones, y NO uses bloques de código Markdown (```json). Si el usuario te habla, coloca tu respuesta para él dentro de la clave 'respuesta_usuario' del JSON.\n\n# GUÍA DE CONVERSACIÓN\n\n## Saludo inicial (si parece primer mensaje o saludo):\n\"¡Hola [nombre_perfil]! 👋 Soy Luna de [EMPRESA].\n¿En qué puedo ayudarte hoy?\"\n\n## Si menciona un problema/necesidad:\n\"Entiendo, [reformula su necesidad brevemente]. \n¿Me cuentas un poco más sobre [aspecto específico]?\"\n\n## Si pregunta precios directamente:\n\"¡Claro! Para darte una cotización precisa, cuéntame primero qué proceso te gustaría automatizar.\nAsí te doy números reales, no aproximados 😊\"\n\n## Si quiere agendar reunión:\n\"¡Perfecto! Te paso con mi equipo para coordinar un prototipo personalizado.\n¿Qué horario te funciona mejor?\"\n\n## Si ya tienes nombre + necesidad:\n\"Genial [nombre], entonces necesitas [necesidad]. \n¿Tienes algún presupuesto estimado en mente o prefieres que te demos opciones?\"\n\n# ORDEN OBLIGATORIO DE CONVERSACIÓN\n1. CONTACTO: Nombre, Negocio, Mail y Necesidad. \n2. VOLUMEN: Evalúa la complejidad (cantidad de mensajes, procesos manuales hoy).\n3. PRESUPUESTO Y ROI: Pregunta qué rango de inversión tienen. Explica que antes de agendar, debemos estar seguros de que el sistema se pague solo con los resultados.\n4. RANGOS Y CIERRE: Da el presupuesto aproximado (Implementación + Mantenimiento).\n\n# LÓGICA DE PRECIOS Y COSTOS (Mercado Argentina)\n- Siempre aclara que el presupuesto se divide en dos partes:\n  1. IMPLEMENTACIÓN: Un pago único por el desarrollo y configuración a medida.\n  2. MANTENIMIENTO: Un abono mensual que cubre la estabilidad del sistema, el uso de las APIs (OpenAI/Meta) y el soporte técnico.\n\n- RANGOS SUGERIDOS:\n  * Soluciones Básicas: Implementación USD 300 - 500.\n  * Soluciones Pro (Integradas a CRM): Implementación USD 800 - 1.500.\n  * Abonos de Mantenimiento soluciones basicas: Suelen rondar entre USD 50 y USD 150 mensuales según el volumen de mensajes.\n  * Abonos de Mantenimiento soluciones avanzadas: Suelen rondar entre USD 400 y USD 700 mensuales según la complejidad de mantenimiento del sistema.\n\n# REGLAS DE ORO\n- NUNCA des un precio exacto. \n- SI el cliente acepta el rango: \"Genial, antes de avanzar, nosotros hacemos un análisis de ROI. Si vemos que la automatización te va a dar un retorno claro, agendamos el relevamiento. ¿Te parece bien?\".\n- SI el cliente cuestiona el precio: \"Nuestra política es la justicia en el precio. Si el proyecto no te va a ahorrar más de lo que cuesta, nosotros mismos te diremos que no lo hagas\".\n- Tus respuestas totales NO deben superar los 280 caracteres.\n- Sé directa. No uses frases de relleno como \"Entiendo perfectamente tu situación\". Ve al grano.\n- Máximo 1 emoji por respuesta total.\n\n# REGLA DE ORO: EL FILTRO DE PRECIO (ESPANTO)\n1. FASE PRECIO: Cuando des el presupuesto (rangos en USD para Argentina), termina el mensaje preguntando: \"¿Cómo ves estos números para lo que tenés en mente?\" o \"¿Te parece que estos valores están dentro de lo que planeabas invertir?\".\n2. PROHIBICIÓN: Está TERMINANTEMENTE PROHIBIDO ofrecer agendar una reunión en el mismo mensaje donde das el precio por primera vez.\n3. DETECCIÓN DE \"ESPANTO\": \n   - Si el cliente dice \"es caro\", \"no llego\", \"buscaba algo de 50 USD\": El estado es RECHAZADO_PRECIO. Sé amable y despedite.\n   - Si el cliente dice \"me sirve\", \"está bien\", \"avancemos\", o sigue preguntando dudas técnicas: El estado es PRECIO_ACEPTADO.\n4. CIERRE (Solo tras PRECIO_ACEPTADO): Solo cuando el usuario confirmó que el rango le sirve, proponé el relevamiento técnico para agendar.\n\n# LÓGICA DE ROI REFORZADA\nSi el volumen es bajo (ej: menos de 5 leads por día), decile honestamente: \"Mirá, para el volumen que tenés hoy, quizás el sistema no se pague solo. Mi consejo es que esperemos a que crezcas un poco más para que la inversión tenga sentido real para vos\".\n\n# LÍMITES ESTRICTOS\n- Máximo 2-3 oraciones por respuesta (WhatsApp se lee en móvil)\n- NO uses listas, bullets ni formatos complejos\n- Máximo 1-2 emojis por mensaje\n- NUNCA inventes precios específicos\n- Si preguntan algo técnico que no sabes, di que un especialista les contactará\n- NO seas repetitivo ni hagas las mismas preguntas\n\n# FORMATO DE SALIDA (JSON ÚNICAMENTE)\n{\n  \"respuesta_usuario\": \"Tu mensaje aquí\",\n  \"datos_extraidos\": {\n    \"nombre\": \"string|null\",\n    \"mail\": \"string|null\",\n    \"negocio\": \"string|null\",\n    \"necesidad\": \"string|null\",\n    \"volumen\": \"string|null\",\n    \"presupuesto\": \"string|null\",\n    \"estado\": \"CUALIFICANDO | PRECIO_ACEPTADO | RECHAZADO_PRECIO | PARA_AGENDAR | RECHAZADO_ROI\"\n  }\n}\n\nIMPORTANTE: \n- Solo incluye valores en datos_extraidos si fueron EXPLÍCITAMENTE mencionados en este mensaje\n- No repitas datos de mensajes anteriores\n- Si el dato no está en el mensaje actual, usa null\n\n\n\n\n\n\n\n\n"
+        }
+      },
+      "id": "64c35015-ae2a-4f70-951e-8f1dcbb3c11b",
+      "name": "🤖 Cerebro IA (Ventas)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        2048,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "options": {
+          "maxTokens": 500,
+          "temperature": 0.7
+        }
+      },
+      "id": "415fbb1e-b3e2-4260-a52b-123d55bebb12",
+      "name": "GPT-4o-mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1952,
+        -48
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "PYMUXY0gT1VZLiKs",
+          "name": "OpenAi account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=TEST1_{{ $json.whatsapp_id }}"
+      },
+      "id": "253fa4a7-1568-41bc-b374-adda79f5c453",
+      "name": "Memoria (5 mensajes)",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2096,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-whatsapp-id",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "set-respuesta",
+              "name": "respuesta",
+              "value": "={{ $json.respuesta_final }}",
+              "type": "string"
+            },
+            {
+              "id": "set-nombre",
+              "name": "nombre_detectado",
+              "value": "={{ $json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-necesidad",
+              "name": "necesidad_detectada",
+              "value": "={{ $json.necesidad || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-presupuesto",
+              "name": "presupuesto_detectado",
+              "value": "={{ $json.presupuesto || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-urgencia",
+              "name": "urgencia",
+              "value": "={{ $json.urgencia || 'desconocida' }}",
+              "type": "string"
+            },
+            {
+              "id": "set-timestamp",
+              "name": "ultima_interaccion",
+              "value": "={{ $json.ultima_interaccion || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "set-nombre-perfil",
+              "name": "nombre_perfil_wa",
+              "value": "={{ $json.nombre_perfil || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "751b7ebb-1c1d-4377-b491-b15bece4cfea",
+              "name": "negocio",
+              "value": "={{ $json.negocio || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "d33017cc-9bd5-4344-983a-b794d465f436",
+              "name": "mail",
+              "value": "={{ $json.mail || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "d24ae04e-698c-42fa-84f1-0028eafa72e1",
+              "name": "volumen",
+              "value": "={{ $json.volumen || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "4ae1376e-7983-4140-98f9-72e597aee989",
+              "name": "estado",
+              "value": "={{ $json.estado }}",
+              "type": "string"
+            },
+            {
+              "id": "0a6666a8-a298-408c-bc47-9976ed08f108",
+              "name": "agendar",
+              "value": "={{ $json.agendar }}",
+              "type": "string"
+            },
+            {
+              "id": "194ce3ab-3863-486e-9a63-e8e7e0294668",
+              "name": "telefono",
+              "value": "={{ $json.telefono || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "a4f5a433-7643-488f-b6eb-f8b7a30ca07d",
+              "name": "es_segundo_mensaje",
+              "value": "={{ $json.es_segundo_mensaje }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "73fe340f-02c5-4f05-ab2a-2df80f4ddb80",
+      "name": "Procesar Salida IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2608,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1jd41b2m126A5fyxWxkKn1KdgdhAw90YPiAdtXN_-sUA",
+          "mode": "list",
+          "cachedResultName": "Demo IA - Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jd41b2m126A5fyxWxkKn1KdgdhAw90YPiAdtXN_-sUA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jd41b2m126A5fyxWxkKn1KdgdhAw90YPiAdtXN_-sUA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $json.whatsapp_id.split('@')[0] }}",
+            "nombre": "={{ $json.nombre_detectado  }}",
+            "necesidad": "={{ $json.necesidad_detectada }}",
+            "presupuesto": "={{ $json.presupuesto_detectado }}",
+            "urgencia": "={{ $json.urgencia }}",
+            "ultima_interaccion": "={{ $json.ultima_interaccion }}",
+            "negocio": "={{ $json.negocio || \"\"}}",
+            "mail": "={{ $json.mail || \"\"}}",
+            "volumen": "={{ $json.volumen || \"\"}}",
+            "agendar": "={{ $json.agendar }}",
+            "estado": "={{ $json.estado }}",
+            "whatsapp_id": "={{ $json.whatsapp_id }}"
+          },
+          "matchingColumns": [
+            "whatsapp_id"
+          ],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "negocio",
+              "displayName": "negocio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "mail",
+              "displayName": "mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "necesidad",
+              "displayName": "necesidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "volumen",
+              "displayName": "volumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "presupuesto",
+              "displayName": "presupuesto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "urgencia",
+              "displayName": "urgencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "agendar",
+              "displayName": "agendar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ultima_interaccion",
+              "displayName": "ultima_interaccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0bc29e83-3119-4c13-b09f-4bf2304440ec",
+      "name": "📊 Google Sheets (Leads)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        3232,
+        -336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YmrsnZhq9Xg8rgOk",
+          "name": "Google Sheets account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Normalizar Campos').item.json.instancia }}",
+        "remoteJid": "={{ $json.whatsapp_id }}",
+        "messageText": "={{ $json.respuesta }}",
+        "options_message": {}
+      },
+      "id": "8457ebe1-2e82-4d35-8eb9-28a2727a4094",
+      "name": "📱 Enviar WhatsApp",
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        3680,
+        -32
+      ],
+      "credentials": {
+        "evolutionApi": {
+          "id": "YtJ7BXEc3SHJIAh0",
+          "name": "wpp - demo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const NOMBRE_NODO_INICIAL = 'Webhook WA'; \nconst MAX_CARACTERES_MENSAJE = 150; \n\ntry {\n    const datosOrigen = $(NOMBRE_NODO_INICIAL).item.json;\n    const whatsapp_id_raw = datosOrigen.body?.data?.key?.remoteJid || datosOrigen.whatsapp_id || \"ID_Desconocido\";\n    const telefono_limpio = whatsapp_id_raw.split('@')[0];\n    const nombre_perfil = datosOrigen.body?.data?.pushName || datosOrigen.nombre_usuario || \"Usuario\";\n    const rawOutput = $json.output || \"\"; \n\n    const d = new Date();\n    const fechaFormateada = [(\"0\"+d.getDate()).slice(-2), (\"0\"+(d.getMonth()+1)).slice(-2), d.getFullYear()].join(\"-\");\n\n    const start = rawOutput.indexOf('{');\n    const end = rawOutput.lastIndexOf('}');\n    if (start === -1 || end === -1) throw new Error(\"No hay JSON\");\n    \n    const cleanJson = JSON.parse(rawOutput.substring(start, end + 1));\n    const dExt = cleanJson.datos_extraidos;\n    const textoCompleto = cleanJson.respuesta_usuario || \"\";\n\n    let partes = [];\n    if (textoCompleto.length > MAX_CARACTERES_MENSAJE) {\n        let puntoCorte = textoCompleto.lastIndexOf('.', MAX_CARACTERES_MENSAJE);\n        if (puntoCorte === -1) puntoCorte = textoCompleto.lastIndexOf(' ', MAX_CARACTERES_MENSAJE);\n        if (puntoCorte === -1) puntoCorte = MAX_CARACTERES_MENSAJE;\n        partes.push(textoCompleto.substring(0, puntoCorte + 1).trim());\n        partes.push(textoCompleto.substring(puntoCorte + 1).trim());\n    } else {\n        partes.push(textoCompleto);\n    }\n\n    // Traducción de estados para humanos en Google Sheets\n    let estadoFinal = \"CUALIFICANDO\";\n    if (dExt?.estado === \"RECHAZADO_ROI\" || dExt?.estado === \"RECHAZADO_PRECIO\") {\n        estadoFinal = \"DESCARTADO\";\n    } else if (dExt?.estado === \"PRECIO_ACEPTADO\") {\n        estadoFinal = \"ACEPTÓ PRECIO (Interesado)\";\n    } else if (dExt?.estado === \"PARA_AGENDAR\") {\n        estadoFinal = \"LISTO PARA AGENDAR\";\n    }\n\n    return partes.slice(0, 2).map((msg, index) => ({\n        json: {\n            whatsapp_id: whatsapp_id_raw,\n            telefono: telefono_limpio,\n            nombre_perfil: nombre_perfil,\n            respuesta_final: msg,\n            es_segundo_mensaje: index === 1,\n            nombre: dExt?.nombre || null,\n            negocio: dExt?.negocio || null,\n            mail: dExt?.mail || null,\n            necesidad: dExt?.necesidad || null,\n            volumen: dExt?.volumen || null,\n            presupuesto: dExt?.presupuesto || null,\n            agendar: dExt?.estado === \"PARA_AGENDAR\" ? \"si\" : \"no\",\n            ultima_interaccion: fechaFormateada,\n            estado: estadoFinal\n        }\n    }));\n} catch (e) {\n    return [{ json: { whatsapp_id: \"error\", respuesta_final: \"Perdón, me perdí un segundo. ¿Me repetís?\", estado: \"ERROR\" } }];\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        -336
+      ],
+      "id": "2ee49fc8-3999-4784-a319-dcfb99d2039a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demo-ventas-wa",
+        "options": {}
+      },
+      "id": "d1afe19a-8c67-42a6-a8df-75c2f02ca05b",
+      "name": "Webhook WA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -800,
+        -416
+      ],
+      "webhookId": "demo-ventas-webhook"
+    },
+    {
+      "parameters": {
+        "amount": "=4"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3440,
+        -160
+      ],
+      "id": "97f15f99-3b2d-4e60-901f-8598c8c87e7d",
+      "name": "Wait",
+      "webhookId": "6c607eaf-9460-4c53-ab8f-bd3994d356ea"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e933eef5-798c-4e23-8daf-e103fe5fe3ed",
+              "leftValue": "={{ $json.es_segundo_mensaje}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3232,
+        -48
+      ],
+      "id": "9e2da2ad-2e1e-4f6a-b161-93fbd64a72b8",
+      "name": "Hay segundo mensaje?"
+    },
+    {
+      "parameters": {
+        "content": "## FUNCIONAMIENTO DEL BLOQUE 1\n\n## 1. **Este bloque se encarga de recibir el mensaje y setearlo, ademas de setear otras variables relevantes del flujo como el ID del Whatsapp, la instancia, etc.**\n## 2. **Otra cosa importante es que distingue entre audios y texto normal o extendido.**",
+        "height": 832,
+        "width": 1600,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -656
+      ],
+      "id": "0112b40f-5bf1-49f0-b30e-bbc5d5ce4441",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## FUNCIONAMIENTO DEL BLOQUE 2 \n\n## 1. **Este bloque se encarga de recibir el mensaje seteado.**\n## 2. **Además se encarga tambien de dar un tiempo prudencial para que el usuario pueda escribir y mediante un nodo de codigo unifica todos los mensajes que se hayan escrito en ese período de tiempo para pasarselos a la IA**",
+        "height": 832,
+        "width": 944,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -656
+      ],
+      "id": "92f9a861-d1d8-44fc-b1e9-73391b3b9b93",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## FUNCIONAMIENTO DEL BLOQUE 3\n\n## 1. **Este bloque se encarga de procesar la información mediante la IA y devolverla en un forma de variables gracias al nodo de código.**\n## 2. **Además mediante un nodo SET normaliza las variables necesarias para poder pasarselas masticadas al siguiente bloque**",
+        "height": 832,
+        "width": 1008,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        -656
+      ],
+      "id": "70880972-1cf3-46b9-a798-4f8cc6e8d643",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## FUNCIONAMIENTO DEL BLOQUE 4\n\n## 1. **Este bloque por un lado carga las variables de calificación a un excel y luego pasa por un nodo condicional**\n## 2. **El nodo condicional determina si es necesario pasar o no por una pausa de 4 segundos dependiendo de si es el primer mensaje o el segundo (el primpero se envía directo y el segundo luego de 4 segundos para simular una respuesta humana)**",
+        "height": 832,
+        "width": 1008,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2944,
+        -656
+      ],
+      "id": "378fe787-04a2-451f-a1cf-a729200b8661",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Se envía como texto": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Campos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se convierte en archivo": {
+      "main": [
+        [
+          {
+            "node": "La IA lo transcribe a texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "La IA lo transcribe a texto": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Campos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Es mensaje del bot?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Tipo de Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Se envía como texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Se envía como texto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener Audio en Base 64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Campos": {
+      "main": [
+        [
+          {
+            "node": "Buffer 10s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar Mensajes": {
+      "main": [
+        [
+          {
+            "node": "Tiene mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene mensaje?": {
+      "main": [
+        [
+          {
+            "node": "🤖 Cerebro IA (Ventas)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Audio en Base 64": {
+      "main": [
+        [
+          {
+            "node": "Se convierte en archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buffer 10s": {
+      "main": [
+        [
+          {
+            "node": "Unificar Mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 Cerebro IA (Ventas)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o-mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🤖 Cerebro IA (Ventas)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria (5 mensajes)": {
+      "ai_memory": [
+        [
+          {
+            "node": "🤖 Cerebro IA (Ventas)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Salida IA": {
+      "main": [
+        [
+          {
+            "node": "📊 Google Sheets (Leads)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hay segundo mensaje?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Procesar Salida IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook WA": {
+      "main": [
+        [
+          {
+            "node": "Es mensaje del bot?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📱 Enviar WhatsApp": {
+      "main": [
+        []
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "📱 Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hay segundo mensaje?": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📱 Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "c94a0b76-3f90-41ab-9984-45f1c92f2da3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "HKjlfVgpYbeK9w9l",
+  "tags": [
+    {
+      "name": "Demo IA Ventas",
+      "id": "ggok7CSg6FsYSjcI",
+      "updatedAt": "2026-01-09T18:21:56.244Z",
+      "createdAt": "2026-01-09T18:21:56.244Z"
+    }
+  ]
+}

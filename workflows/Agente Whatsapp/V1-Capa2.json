@@ -1,0 +1,775 @@
+{
+  "name": "Capa 2 - Cerebro",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bbb441d6-0f44-4394-a1d7-c02d0bf9ade0",
+      "name": "Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1376,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "5e1b446e-2d1f-4a0a-b5f0-7e1cd1cb1ab5",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "2915075d-5f48-4f9d-a076-f7e49596cabf",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "57be0673-ac55-4fd5-9372-52cd44cec5a7",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 2,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "4d64efcd-6b91-4a10-82e3-858ec4393533",
+                    "leftValue": "={{ $json.paso_actual }}",
+                    "rightValue": 3,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4d97a6b9-abc3-450c-9bd3-47d52e68c8dc",
+      "name": "Switch Paso Actual",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1072,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88d5b8b5-67d3-4500-b815-02c446d49b4a",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: El usuario es nuevo. Estamos en la Fase 0: Bienvenida. INSTRUCCIÓN: Saluda amablemente, preséntate y rompe el hielo. NO hagas preguntas de ventas todavía. Tu objetivo es solo conectar.",
+              "type": "string"
+            },
+            {
+              "id": "2b72bfca-679c-4738-9611-078dc345c7f8",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "23e15014-1421-415c-9922-28a747fa89dd",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "d015621e-0db7-4311-a788-2545c8b7cc65",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "918656ee-b671-4ad4-9d27-e4c42dcd5746",
+      "name": "Set Prompt Bienvenida",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -784,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "610b886d-ac52-45e8-a504-5402246c3056",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: Conversación avanzada. Estamos en la Fase 2: Solución/Cierre. INSTRUCCIÓN: Si ya tienes toda la información necesaria (BANT), puedes proceder a explicar cómo ayudas o dar rangos de precios según tu Prompt Maestro. Si no, sigue investigando.",
+              "type": "string"
+            },
+            {
+              "id": "7e7f5d0c-9e73-412b-97ba-679e5a63d268",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "14e290ad-97e2-46c0-92c1-85967a0c58b0",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "033cd34f-017a-4302-a2ff-a5afcb17e2f6",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "23b2939a-3b1c-41e3-9b8a-6c94b15e28ae",
+      "name": "Set Prompt Presupuesto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -784,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.somoslibresuba.com/webhook-test/agente-respuesta",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "whatsapp_id",
+              "value": "={{ $('Webhook Interno').item.json.body.whatsapp_id }}"
+            },
+            {
+              "name": "mensaje_usuario",
+              "value": "={{ $node[\"Webhook Interno\"].json.body.mensaje }}"
+            },
+            {
+              "name": "instruccion_sistema",
+              "value": "={{ $json.prompt_instruccion }}"
+            },
+            {
+              "name": "nombre_guardado",
+              "value": "={{ $json.nombre_guardado }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a38c15cb-8cf6-4201-b9f7-c0db96cae2c1",
+      "name": "Enviar a Capa 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -128,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "whatsapp_id"
+            },
+            {
+              "name": "mensaje"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1952,
+        128
+      ],
+      "id": "b06488d1-e4f2-46a1-9a78-14e895fef6b8",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "3gR60YDbhVJ3Ynrp",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/3gR60YDbhVJ3Ynrp",
+          "cachedResultName": "Capa 3 - Cerebro IA (Loop Dinámico)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "prompt_instruccion": "={{ $json.prompt_instruccion }}",
+            "nombre_guardado": "={{ $json.nombre_guardado }}",
+            "whatsapp_id": "={{ $json.whatsapp_id }}",
+            "mensaje": "={{ $json.mensaje }}",
+            "estado": "={{ $json.estado }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "prompt_instruccion",
+              "displayName": "prompt_instruccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nombre_guardado",
+              "displayName": "nombre_guardado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        96
+      ],
+      "id": "ce56f01e-d7e2-42f4-8950-f8a119ac90a1",
+      "name": "Call 'Capa 3 - Agente IA y Respuesta'"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1632,
+        128
+      ],
+      "id": "2135c7df-69bc-4384-9b79-2030a561aa38",
+      "name": "Consultar Lead",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paso_actual": 0,
+            "estado": "nuevo",
+            "whatsapp_id": "={{ $('When Executed by Another Workflow').item.json.whatsapp_id }}",
+            "creado_en": "={{ $now.format('dd-MM-yyyy') }}",
+            "actualizado_en": "={{ $now.format('dd-MM-yyyy') }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "paso_actual",
+              "displayName": "paso_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "respuestas",
+              "displayName": "respuestas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "creado_en",
+              "displayName": "creado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "actualizado_en",
+              "displayName": "actualizado_en",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "replaceEmptyStrings": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1120,
+        352
+      ],
+      "id": "07cc590e-8a1a-419e-92ef-97d23b3d2965",
+      "name": "Crear nuevo lead",
+      "credentials": {
+        "postgres": {
+          "id": "uoM2ZwSq83uEgAFK",
+          "name": "Postgres account - Propia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e728f3a-6ddb-47ce-8914-ca4a719edeb3",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: El usuario ya inició la conversación. Estamos en la Fase 1: Discovery. INSTRUCCIÓN: Aplica estrictamente tu Prompt Maestro. Haz preguntas de diagnóstico para entender su negocio. NO des precios ni presupuestos todavía hasta entender sus dolores.",
+              "type": "string"
+            },
+            {
+              "id": "17599e84-8fac-4492-bf8d-851f0441213a",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ef52030f-a7c5-4895-a76e-ca3dc013410c",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "c7cc58d1-cad0-4764-8880-0d239dc903c2",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6680dcda-7557-4434-936f-ae404c81afaa",
+      "name": "Set Prompt Descubrimiento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e728f3a-6ddb-47ce-8914-ca4a719edeb3",
+              "name": "prompt_instruccion",
+              "value": "CONTEXTO: El usuario ya nos contó sobre su negocio y entendemos mejor sus necesidades. Estamos en la Fase 2: Clasificación. INSTRUCCIÓN: Aplica estrictamente tu Prompt Maestro. Haz preguntas de diagnóstico para saber si es un cliente calificado o no para pasar a la fase final. NO des precios ni presupuestos todavía hasta entender sus dolores.",
+              "type": "string"
+            },
+            {
+              "id": "17599e84-8fac-4492-bf8d-851f0441213a",
+              "name": "nombre_guardado",
+              "value": "={{ $('Consultar Lead').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ef52030f-a7c5-4895-a76e-ca3dc013410c",
+              "name": "whatsapp_id",
+              "value": "={{ $json.whatsapp_id }}",
+              "type": "string"
+            },
+            {
+              "id": "c7cc58d1-cad0-4764-8880-0d239dc903c2",
+              "name": "mensaje",
+              "value": "={{ $('When Executed by Another Workflow').item.json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "84600eff-97f9-4c0a-9fc7-f13cfc387590",
+      "name": "Set Prompt Calificacion",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        -304
+      ]
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "whatsapp_id": "5491139377660@s.whatsapp.net",
+          "mensaje": "Dale, perfecto. Muchas gracias."
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Existe?": {
+      "main": [
+        [
+          {
+            "node": "Switch Paso Actual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crear nuevo lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Paso Actual": {
+      "main": [
+        [
+          {
+            "node": "Set Prompt Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Prompt Descubrimiento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Prompt Calificacion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Prompt Presupuesto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Bienvenida": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Presupuesto": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Consultar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Lead": {
+      "main": [
+        [
+          {
+            "node": "Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear nuevo lead": {
+      "main": [
+        [
+          {
+            "node": "Set Prompt Bienvenida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Descubrimiento": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Calificacion": {
+      "main": [
+        [
+          {
+            "node": "Call 'Capa 3 - Agente IA y Respuesta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "eOzzOy0LpsKbPsEL"
+  },
+  "versionId": "4933e394-9610-470c-8bcb-5d58fee08372",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9402ccb30b6bbc8fea012e909905ab4895933083a3dfc7f2f05fe6db0650f68b"
+  },
+  "id": "GTco1FWIVxa11eHt",
+  "tags": []
+}
